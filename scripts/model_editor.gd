@@ -1,3 +1,4 @@
+class_name ModelEditor
 extends Node3D
 ## Editor in-game de modelos 3D: carga archivos FBX / GLB / GLTF en runtime
 ## (con F2 o arrastrando el archivo a la ventana del juego), los apoya sobre
@@ -150,7 +151,7 @@ func load_model(path: String, mode: Mode = Mode.PLACING) -> String:
 
 ## Camaras, luces y settings de render que vienen dentro del archivo pisarian
 ## la camara e iluminacion del juego: se eliminan, quedan solo las mallas.
-func _strip_non_visual_nodes(node: Node) -> void:
+static func _strip_non_visual_nodes(node: Node) -> void:
 	for child in node.get_children():
 		_strip_non_visual_nodes(child)
 	if node is Camera3D or node is Light3D or node is AnimationPlayer:
@@ -159,7 +160,7 @@ func _strip_non_visual_nodes(node: Node) -> void:
 
 ## Los modelos low-poly suelen pintar con colores de vertice que el material
 ## importado no usa por defecto.
-func _enable_vertex_colors(node: Node) -> void:
+static func _enable_vertex_colors(node: Node) -> void:
 	if node is MeshInstance3D and node.mesh != null:
 		var mesh: Mesh = node.mesh
 		for s in range(mesh.get_surface_count()):
@@ -171,7 +172,7 @@ func _enable_vertex_colors(node: Node) -> void:
 		_enable_vertex_colors(child)
 
 ## AABB combinada de todas las mallas, acumulando transforms de la jerarquia.
-func _combined_aabb(node: Node, parent_transform: Transform3D) -> AABB:
+static func _combined_aabb(node: Node, parent_transform: Transform3D) -> AABB:
 	var transform := parent_transform
 	if node is Node3D:
 		transform = parent_transform * (node as Node3D).transform
@@ -319,6 +320,9 @@ func _build_ui() -> void:
 	layer.add_child(_panel)
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 12)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	# Corrido hacia abajo para no pisar el panel de estado (StatusUI).
+	_panel.offset_top += 110
+	_panel.offset_bottom += 110
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)

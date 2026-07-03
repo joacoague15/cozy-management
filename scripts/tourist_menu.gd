@@ -51,18 +51,21 @@ func _build_ui() -> void:
 	_add_single_row(vbox, "Spawn: segundos por turista", TouristConfig, "spawn_interval", 0.1, 10.0, 0.1)
 
 	_add_section(vbox, "Basura y limpieza")
-	_add_int_row(vbox, "Casas conectadas por foco de basura", "dirt_cluster_size", 2, 20)
+	_add_int_row(vbox, "Casas en un 3x3 para ensuciarlo", "dirt_house_threshold", 2, 9)
 	_add_int_row(vbox, "Area purificada (NxN)", "clean_size", 1, 9)
 
 	_add_section(vbox, "Naturaleza")
-	_add_int_row(vbox, "Tiles de casa por naturaleza", "nature_ratio", 1, 50)
+	_add_int_row(vbox, "Cada cuantas casas se exige", "nature_per_houses", 1, 20)
+	_add_int_row(vbox, "Naturalezas por grupo de casas", "nature_amount", 1, 10)
 	_add_int_row(vbox, "Tamano del tile (NxN)", "nature_size", 1, 5)
 
 	_add_section(vbox, "Construcciones historicas")
-	_add_int_row(vbox, "Tamano (NxN)", "historic_size", 3, 10)
-	_add_int_row(vbox, "1ra: turistas totales", "historic_tourists_1", 1, 1000)
-	_add_int_row(vbox, "2da: turistas adicionales", "historic_tourists_2", 1, 1000)
-	_add_int_row(vbox, "3ra: turistas adicionales", "historic_tourists_3", 1, 1000)
+	_add_int_row(vbox, "Palacio: tamano (NxN)", "historic_size", 3, 10)
+	_add_single_row(vbox, "Estatua: tamano (tiles)", GameConfig, "statue_size", 0.5, 10.0, 0.1)
+	_add_single_row(vbox, "Estatua: altura base (m)", GameConfig, "statue_offset_y", -2.0, 5.0, 0.1)
+	_add_int_row(vbox, "Estatua (construirla abre 9x9): turistas", "historic_tourists_1", 1, 1000)
+	_add_int_row(vbox, "Catedral (construirla abre 20x20): +turistas", "historic_tourists_2", 1, 1000)
+	_add_int_row(vbox, "Palacio: +turistas", "historic_tourists_3", 1, 1000)
 
 	var hint := Label.new()
 	hint.text = "Velocidad y estadia se sortean al aparecer cada turista."

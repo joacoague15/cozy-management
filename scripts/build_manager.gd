@@ -1,9 +1,12 @@
 extends Node3D
 ## Maneja la colocacion y borrado de edificios sobre la grilla del terreno.
-## Teclas 1/2/3: casas. 4: tile de limpieza (purifica la suciedad alrededor).
-## 5: naturaleza (obligatoria cada N tiles de casa). 6/7/8: construcciones
-## historicas (se desbloquean con turistas totales, una de cada una).
-## Click izquierdo coloca, click derecho cancela la seleccion o borra.
+## Teclas 1/2/3: casas (geometria procedural via HouseGenerator: cada una sale
+## distinta). 4: tile de limpieza (purifica la suciedad alrededor; al elegirla
+## se previsualiza el area NxN que va a purificar). 5: naturaleza (se exigen
+## GameConfig.nature_amount por cada nature_per_houses casas). 6/7/8:
+## construcciones historicas (se desbloquean con turistas totales, una de cada
+## una; la 6 es la estatua de Alfonso XIII, ocupa 1x1 y construirla amplia la
+## zona construible). Click izquierdo coloca, click derecho cancela o borra.
 
 signal buildings_changed
 
@@ -14,16 +17,6 @@ const TYPE_CLEANER := "cleaner"
 const TYPE_NATURE := "nature"
 const TYPE_HISTORIC := "historic"
 
-const HOUSE_COLORS := {
-	1: Color(0.93, 0.76, 0.42),
-	2: Color(0.78, 0.52, 0.42),
-	3: Color(0.55, 0.62, 0.79),
-}
-const HOUSE_HEIGHTS := {
-	1: 1.0,
-	2: 1.6,
-	3: 2.4,
-}
 const CLEANER_COLOR := Color(0.55, 0.83, 0.93)
 const CLEANER_HEIGHT := 0.6
 const NATURE_COLOR := Color(0.25, 0.56, 0.27)
@@ -39,18 +32,22 @@ const HISTORIC_HEIGHTS := {
 	3: 4.5,
 }
 const HISTORIC_NAMES := {
-	1: "Monumento",
+	1: "Estatua",
 	2: "Catedral",
 	3: "Palacio",
 }
-const NEIGHBOR_OFFSETS: Array[Vector2i] = [
-	Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
-]
+const STATUE_PATH := "res://models/Estatua_AlfonsoXIII.fbx"
 const GHOST_VALID_COLOR := Color(0.3, 0.9, 0.3, 0.45)
 const GHOST_INVALID_COLOR := Color(0.9, 0.25, 0.25, 0.45)
+const CLEAN_PREVIEW_COLOR := Color(0.55, 0.83, 0.93)
+
+## Lados de las zonas construibles (centradas en la grilla). Se arranca en la
+## primera; ver _update_unlocks para los requisitos de cada ampliacion.
+const UNLOCK_SIZES: Array[int] = [3, 9, 20]
 
 @export var info_label: Label
 @export var tourist_manager: Node3D
+@export var terrain: TerrainTiles
 ## Margen caminable que deja cada edificio en los bordes de su tile.
 ## El gap entre dos edificios vecinos es el doble de este valor.
 @export var building_margin := 0.2
@@ -64,13 +61,27 @@ var _ghost: MeshInstance3D
 var _ghost_material: StandardMaterial3D
 var _hover_cell := Vector2i.ZERO
 var _hover_valid := false
+var _area_ghost: MeshInstance3D
+var _area_ghost_material: StandardMaterial3D
+var _statue_template: Node3D
+var _last_statue_size := -1.0
+var _last_statue_offset := 0.0
+var _unlock_stage := 0
 
 func _ready() -> void:
 	_create_ghost()
+	_load_statue()
+	terrain.set_unlocked_rect(unlocked_rect(), false)
+
+func _exit_tree() -> void:
+	if _statue_template != null:
+		_statue_template.free()
 
 func _process(_delta: float) -> void:
+	_update_unlocks()
 	_update_ghost()
 	_update_info_label()
+	_update_placed_statues()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -109,6 +120,7 @@ func _select(type: String, variant: int) -> void:
 	_selected_type = type
 	_selected_variant = variant
 	_ghost.visible = type != ""
+	_area_ghost.visible = false
 
 ## Lado en tiles de la seleccion actual (los configurables se leen en vivo).
 func _selection_size() -> int:
@@ -120,13 +132,19 @@ func _selection_size() -> int:
 		TYPE_NATURE:
 			return maxi(GameConfig.nature_size, 1)
 		TYPE_HISTORIC:
+			# Estatua 1x1, Catedral 3x3; el Palacio usa el tamano configurable.
+			match _selected_variant:
+				1:
+					return 1
+				2:
+					return 3
 			return maxi(GameConfig.historic_size, 1)
 	return 0
 
 func _selection_height() -> float:
 	match _selected_type:
 		TYPE_HOUSE:
-			return HOUSE_HEIGHTS[_selected_variant]
+			return HouseGenerator.BASE_HEIGHTS[_selected_variant]
 		TYPE_CLEANER:
 			return CLEANER_HEIGHT
 		TYPE_NATURE:
@@ -138,7 +156,7 @@ func _selection_height() -> float:
 func _selection_color() -> Color:
 	match _selected_type:
 		TYPE_HOUSE:
-			return HOUSE_COLORS[_selected_variant]
+			return HouseGenerator.BASE_COLORS[_selected_variant]
 		TYPE_CLEANER:
 			return CLEANER_COLOR
 		TYPE_NATURE:
@@ -172,12 +190,24 @@ func _create_ghost() -> void:
 	_ghost.visible = false
 	add_child(_ghost)
 
+	# Quad translucido que previsualiza el area que purificara la limpieza.
+	_area_ghost = MeshInstance3D.new()
+	_area_ghost.mesh = PlaneMesh.new()
+	_area_ghost_material = StandardMaterial3D.new()
+	_area_ghost_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_area_ghost_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_area_ghost.mesh.material = _area_ghost_material
+	_area_ghost.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_area_ghost.visible = false
+	add_child(_area_ghost)
+
 func _update_ghost() -> void:
 	if _selected_type == "":
 		return
 	var ground: Variant = mouse_to_ground()
 	if ground == null:
 		_ghost.visible = false
+		_area_ghost.visible = false
 		_hover_valid = false
 		return
 	var hit: Vector3 = ground
@@ -198,9 +228,25 @@ func _update_ghost() -> void:
 	)
 	_ghost_material.albedo_color = GHOST_VALID_COLOR if _hover_valid else GHOST_INVALID_COLOR
 	_ghost.visible = true
+	_update_clean_preview()
+
+## Feedback del area NxN que va a purificar el tile de limpieza antes de
+## colocarlo: un quad apenas visible con un pulso suave de opacidad.
+func _update_clean_preview() -> void:
+	if _selected_type != TYPE_CLEANER:
+		_area_ghost.visible = false
+		return
+	var clean := maxi(GameConfig.clean_size, 1)
+	var plane: PlaneMesh = _area_ghost.mesh
+	plane.size = Vector2(clean, clean)
+	_area_ghost.position = Vector3(_hover_cell.x + 0.5, 0.03, _hover_cell.y + 0.5)
+	var color := CLEAN_PREVIEW_COLOR
+	color.a = 0.16 + 0.07 * sin(Time.get_ticks_msec() / 350.0)
+	_area_ghost_material.albedo_color = color
+	_area_ghost.visible = true
 
 func _can_place(cell: Vector2i, size: int) -> bool:
-	if cell.x < 0 or cell.y < 0 or cell.x + size > GRID_SIZE or cell.y + size > GRID_SIZE:
+	if not unlocked_rect().encloses(Rect2i(cell, Vector2i(size, size))):
 		return false
 	for x in range(size):
 		for y in range(size):
@@ -222,25 +268,36 @@ func _place_building(cell: Vector2i) -> void:
 		body.collision_layer = 2
 		body.collision_mask = 0
 		building = body
-	building.position = Vector3(cell.x + size * 0.5, height * 0.5, cell.y + size * 0.5)
+	# El pivote queda en el centro del footprint, con la base apoyada en y=0.
+	building.position = Vector3(cell.x + size * 0.5, 0.0, cell.y + size * 0.5)
 
 	# La naturaleza cubre sus tiles completas; el resto deja margen caminable.
 	var side := float(size) if _selected_type == TYPE_NATURE else size - building_margin * 2.0
 
-	var mesh_instance := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(side, height, side)
-	var material := StandardMaterial3D.new()
-	material.albedo_color = _selection_color()
-	mesh.material = material
-	mesh_instance.mesh = mesh
-	building.add_child(mesh_instance)
+	if _selected_type == TYPE_HOUSE:
+		var house := HouseGenerator.build(_selected_variant, size, building_margin)
+		building.add_child(house)
+		# La colision cubre solo el cuerpo (el techo sobresale sin colision).
+		height = house.get_meta("wall_height")
+	elif _selected_type == TYPE_HISTORIC and _selected_variant == 1 and _statue_template != null:
+		building.add_child(_make_statue_visual())
+	else:
+		var mesh_instance := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(side, height, side)
+		var material := StandardMaterial3D.new()
+		material.albedo_color = _selection_color()
+		mesh.material = material
+		mesh_instance.mesh = mesh
+		mesh_instance.position.y = height * 0.5
+		building.add_child(mesh_instance)
 
 	if building is StaticBody3D:
 		var collision := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
 		shape.size = Vector3(side, height, side)
 		collision.shape = shape
+		collision.position.y = height * 0.5
 		building.add_child(collision)
 
 	_buildings.add_child(building)
@@ -254,6 +311,7 @@ func _place_building(cell: Vector2i) -> void:
 	building.set_meta("cells", cells)
 	building.set_meta("cell", cell)
 	building.set_meta("size", size)
+	building.set_meta("height", height)
 	building.set_meta("type", _selected_type)
 	building.set_meta("variant", _selected_variant)
 	buildings_changed.emit()
@@ -278,45 +336,20 @@ func get_buildings() -> Array[Node]:
 func _valid_buildings() -> Array[Node]:
 	return get_buildings().filter(func(b: Node) -> bool: return not b.is_queued_for_deletion())
 
-## True si alguna celda de la casa tiene una casa distinta en un lado ortogonal.
-func house_has_neighbor(building: Node3D) -> bool:
-	for c in building.get_meta("cells"):
-		for offset in NEIGHBOR_OFFSETS:
-			var neighbor: Vector2i = c + offset
-			if _occupancy.has(neighbor) and _occupancy[neighbor] != building \
-					and _occupancy[neighbor].get_meta("type") == TYPE_HOUSE:
-				return true
-	return false
-
-# --- Sistema de basura -------------------------------------------------------
-
-## Conjuntos de casas conectadas: dos casas pertenecen al mismo conjunto si
-## alguna de sus celdas comparte un lado ortogonal. Devuelve un Array de
-## Arrays de nodos casa. Lo usa DirtManager para generar basura.
-func house_clusters() -> Array:
-	var clusters: Array = []
-	var visited := {}
-	for building in _valid_buildings():
-		if building.get_meta("type") != TYPE_HOUSE or visited.has(building):
-			continue
-		var cluster: Array = []
-		var stack: Array = [building]
-		visited[building] = true
-		while not stack.is_empty():
-			var current: Node3D = stack.pop_back()
-			cluster.append(current)
-			for c in current.get_meta("cells"):
-				for offset in NEIGHBOR_OFFSETS:
-					var neighbor: Node3D = _occupancy.get(c + offset)
-					if neighbor != null and neighbor != current \
-							and not visited.has(neighbor) \
-							and neighbor.get_meta("type") == TYPE_HOUSE:
-						visited[neighbor] = true
-						stack.append(neighbor)
-		clusters.append(cluster)
-	return clusters
+## Edificio que ocupa la celda, o null. Lo usa DirtManager para contar las
+## casas de cada ventana de 3x3.
+func building_at(cell: Vector2i) -> Node3D:
+	return _occupancy.get(cell)
 
 # --- Sistema de naturaleza -------------------------------------------------
+
+## Cantidad de casas colocadas.
+func house_count() -> int:
+	var total := 0
+	for building in _valid_buildings():
+		if building.get_meta("type") == TYPE_HOUSE:
+			total += 1
+	return total
 
 ## Tiles (celdas) ocupadas por casas.
 func house_tile_count() -> int:
@@ -333,9 +366,9 @@ func nature_count() -> int:
 			total += 1
 	return total
 
-## Naturalezas exigidas: una cada GameConfig.nature_ratio tiles de casa.
+## Naturalezas exigidas: nature_amount por cada nature_per_houses casas.
 func nature_needed() -> int:
-	return house_tile_count() / maxi(GameConfig.nature_ratio, 1)
+	return house_count() / maxi(GameConfig.nature_per_houses, 1) * GameConfig.nature_amount
 
 # --- Sistema de construcciones historicas -----------------------------------
 
@@ -359,6 +392,88 @@ func is_historic_placed(variant: int) -> bool:
 		if building.get_meta("type") == TYPE_HISTORIC and building.get_meta("variant") == variant:
 			return true
 	return false
+
+# --- Zonas desbloqueables ----------------------------------------------------
+
+## Rectangulo (en celdas) donde se puede construir en la etapa actual.
+func unlocked_rect() -> Rect2i:
+	var side: int = UNLOCK_SIZES[_unlock_stage]
+	var start := (GRID_SIZE - side) / 2
+	return Rect2i(start, start, side, side)
+
+func unlocked_side() -> int:
+	return UNLOCK_SIZES[_unlock_stage]
+
+## Que falta para la proxima ampliacion de zona ("" si esta todo abierto).
+## Lo muestra el StatusUI.
+func next_zone_requirement() -> String:
+	match _unlock_stage:
+		0:
+			return "construi la estatua (%d turistas)" % historic_threshold(1)
+		1:
+			return "construi la catedral (%d turistas)" % historic_threshold(2)
+	return ""
+
+## Cada ampliacion se dispara al CONSTRUIR un monumento: la estatua abre la
+## zona 9x9 y la catedral la 20x20.
+func _update_unlocks() -> void:
+	if _unlock_stage == 0 and is_historic_placed(1):
+		_advance_unlock()
+	if _unlock_stage == 1 and is_historic_placed(2):
+		_advance_unlock()
+
+func _advance_unlock() -> void:
+	_unlock_stage += 1
+	terrain.set_unlocked_rect(unlocked_rect(), true)
+
+# --- Estatua de Alfonso XIII (historica 1) -----------------------------------
+
+## Carga el modelo de la estatua una sola vez; cada colocacion lo duplica.
+## Si el asset no esta importado por el editor, se parsea el FBX en runtime.
+func _load_statue() -> void:
+	if ResourceLoader.exists(STATUE_PATH):
+		var scene: PackedScene = load(STATUE_PATH)
+		if scene != null:
+			_statue_template = scene.instantiate()
+	if _statue_template == null:
+		var doc := FBXDocument.new()
+		var state := FBXState.new()
+		if doc.append_from_file(STATUE_PATH, state) == OK:
+			_statue_template = doc.generate_scene(state)
+	if _statue_template == null:
+		push_warning("No se pudo cargar %s: la historica 1 usara la caja." % STATUE_PATH)
+		return
+	ModelEditor._strip_non_visual_nodes(_statue_template)
+	ModelEditor._enable_vertex_colors(_statue_template)
+
+## Contenedor con el pivote en el centro de la base de la estatua, escalado
+## al footprint configurado (GameConfig.statue_size, ajustable en vivo por F1).
+func _make_statue_visual() -> Node3D:
+	var model := _statue_template.duplicate()
+	var container := Node3D.new()
+	var aabb := ModelEditor._combined_aabb(model, Transform3D.IDENTITY)
+	var center := aabb.get_center()
+	model.position = -Vector3(center.x, aabb.position.y, center.z)
+	container.add_child(model)
+	container.set_meta("fit_scale", 1.0 / maxf(maxf(aabb.size.x, aabb.size.z), 0.001))
+	container.add_to_group("statue_visual")
+	_apply_statue_config(container)
+	return container
+
+func _apply_statue_config(container: Node3D) -> void:
+	container.scale = Vector3.ONE * container.get_meta("fit_scale") * GameConfig.statue_size
+	container.position.y = GameConfig.statue_offset_y
+
+## Aplica en vivo los cambios de escala/altura del menu F1 a las estatuas ya
+## colocadas.
+func _update_placed_statues() -> void:
+	if GameConfig.statue_size == _last_statue_size \
+			and GameConfig.statue_offset_y == _last_statue_offset:
+		return
+	_last_statue_size = GameConfig.statue_size
+	_last_statue_offset = GameConfig.statue_offset_y
+	for container in get_tree().get_nodes_in_group("statue_visual"):
+		_apply_statue_config(container)
 
 # ---------------------------------------------------------------------------
 

@@ -1,19 +1,14 @@
-[gd_scene load_steps=13 format=3 uid="uid://b7n1ce8audqbm"]
+[gd_scene format=3 uid="uid://b7n1ce8audqbm"]
 
-[ext_resource type="Script" path="res://scripts/camera_controller.gd" id="1_cam"]
-[ext_resource type="Script" path="res://scripts/build_manager.gd" id="2_build"]
-[ext_resource type="Shader" path="res://shaders/grid.gdshader" id="3_grid"]
-[ext_resource type="Script" path="res://scripts/tourist_manager.gd" id="4_tourists"]
-[ext_resource type="Script" path="res://scripts/tourist_menu.gd" id="5_menu"]
-[ext_resource type="Script" path="res://scripts/dirt_manager.gd" id="6_dirt"]
-[ext_resource type="Script" path="res://scripts/model_editor.gd" id="7_models"]
-
-[sub_resource type="ShaderMaterial" id="terrain_material"]
-shader = ExtResource("3_grid")
-
-[sub_resource type="PlaneMesh" id="terrain_mesh"]
-material = SubResource("terrain_material")
-size = Vector2(20, 20)
+[ext_resource type="Script" uid="uid://dwm8ufwc3sqlb" path="res://scripts/camera_controller.gd" id="1_cam"]
+[ext_resource type="Script" uid="uid://gmjg0kahvdmh" path="res://scripts/build_manager.gd" id="2_build"]
+[ext_resource type="Shader" uid="uid://cxh7dtxophmv7" path="res://shaders/grid.gdshader" id="3_grid"]
+[ext_resource type="Script" uid="uid://cp8qab7xw722g" path="res://scripts/tourist_manager.gd" id="4_tourists"]
+[ext_resource type="Script" uid="uid://cixa0tr616w11" path="res://scripts/tourist_menu.gd" id="5_menu"]
+[ext_resource type="Script" uid="uid://dsrgow8j0qjjb" path="res://scripts/dirt_manager.gd" id="6_dirt"]
+[ext_resource type="Script" uid="uid://8dthliudy008" path="res://scripts/model_editor.gd" id="7_models"]
+[ext_resource type="Script" path="res://scripts/status_ui.gd" id="8_status"]
+[ext_resource type="Script" path="res://scripts/terrain_tiles.gd" id="9_terrain"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 sky_top_color = Color(0.38, 0.55, 0.83, 1)
@@ -29,54 +24,71 @@ background_mode = 2
 sky = SubResource("sky")
 tonemap_mode = 2
 
-[node name="Main" type="Node3D"]
+[sub_resource type="ShaderMaterial" id="terrain_material"]
+render_priority = 0
+shader = ExtResource("3_grid")
+shader_parameter/base_color = Color(0.47, 0.65, 0.36, 1)
+shader_parameter/line_color = Color(0.32, 0.46, 0.25, 1)
+shader_parameter/line_width = 0.025
+shader_parameter/dirt_color = Color(0.23, 0.2, 0.16, 1)
+shader_parameter/dirt_strength = 0.7
+shader_parameter/grid_extent = 20.0
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="Main" type="Node3D" unique_id=968176690]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1473130343]
 environment = SubResource("environment")
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1844816828]
 transform = Transform3D(0.8192, 0.4699, -0.329, 0, 0.5736, 0.8192, 0.5736, -0.671, 0.4699, 0, 12, 0)
 shadow_enabled = true
 
-[node name="Terrain" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 10)
-mesh = SubResource("terrain_mesh")
+[node name="Terrain" type="MultiMeshInstance3D" parent="." unique_id=170349714]
+material_override = SubResource("terrain_material")
+script = ExtResource("9_terrain")
 
-[node name="CameraRig" type="Node3D" parent="."]
+[node name="CameraRig" type="Node3D" parent="." unique_id=876013775]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 10)
 script = ExtResource("1_cam")
 
-[node name="Pitch" type="Node3D" parent="CameraRig"]
+[node name="Pitch" type="Node3D" parent="CameraRig" unique_id=1893622014]
 
-[node name="Camera3D" type="Camera3D" parent="CameraRig/Pitch"]
+[node name="Camera3D" type="Camera3D" parent="CameraRig/Pitch" unique_id=1396785738]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 18)
 
-[node name="BuildManager" type="Node3D" parent="." node_paths=PackedStringArray("info_label", "tourist_manager")]
+[node name="BuildManager" type="Node3D" parent="." unique_id=114517024 node_paths=PackedStringArray("info_label", "tourist_manager", "terrain")]
 script = ExtResource("2_build")
 info_label = NodePath("../UI/InfoLabel")
 tourist_manager = NodePath("../TouristManager")
+terrain = NodePath("../Terrain")
 
-[node name="Buildings" type="Node3D" parent="BuildManager"]
+[node name="Buildings" type="Node3D" parent="BuildManager" unique_id=2108193447]
 
-[node name="TouristManager" type="Node3D" parent="." node_paths=PackedStringArray("build_manager")]
+[node name="TouristManager" type="Node3D" parent="." unique_id=646109196 node_paths=PackedStringArray("build_manager", "dirt_manager")]
 script = ExtResource("4_tourists")
 build_manager = NodePath("../BuildManager")
+dirt_manager = NodePath("../DirtManager")
 
-[node name="DirtManager" type="Node" parent="." node_paths=PackedStringArray("build_manager", "terrain")]
+[node name="DirtManager" type="Node" parent="." unique_id=620563358 node_paths=PackedStringArray("build_manager", "terrain")]
 script = ExtResource("6_dirt")
 build_manager = NodePath("../BuildManager")
 terrain = NodePath("../Terrain")
 
-[node name="ModelEditor" type="Node3D" parent="." node_paths=PackedStringArray("build_manager")]
+[node name="ModelEditor" type="Node3D" parent="." unique_id=974854523 node_paths=PackedStringArray("build_manager")]
 script = ExtResource("7_models")
 build_manager = NodePath("../BuildManager")
 
-[node name="TouristMenu" type="CanvasLayer" parent="."]
+[node name="TouristMenu" type="CanvasLayer" parent="." unique_id=1735458031]
 script = ExtResource("5_menu")
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="StatusUI" type="CanvasLayer" parent="." node_paths=PackedStringArray("tourist_manager", "build_manager")]
+script = ExtResource("8_status")
+tourist_manager = NodePath("../TouristManager")
+build_manager = NodePath("../BuildManager")
 
-[node name="InfoLabel" type="Label" parent="UI"]
+[node name="UI" type="CanvasLayer" parent="." unique_id=359033998]
+
+[node name="InfoLabel" type="Label" parent="UI" unique_id=128417628]
 offset_left = 12.0
 offset_top = 12.0
 offset_right = 700.0

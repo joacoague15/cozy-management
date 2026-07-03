@@ -3,21 +3,30 @@ extends Node
 ## (suciedad, naturaleza y construcciones historicas).
 ## El menu F1 modifica estos valores en vivo.
 
-## Cantidad minima de casas conectadas (compartiendo al menos un lado)
-## para que el conjunto genere basura sobre sus tiles.
-var dirt_cluster_size := 4
+## Casas minimas dentro de una ventana de 3x3 para que esa ventana completa
+## (sus 9 tiles) se vuelva suciedad.
+var dirt_house_threshold := 4
 
 ## Lado del area (NxN) que purifica cada tile de limpieza, centrada en el.
-var clean_size := 3
+var clean_size := 5
 
-## Cada cuantos tiles de casa se exige colocar una naturaleza.
-var nature_ratio := 5
+## Cada cuantas casas colocadas se exige un grupo de naturaleza.
+var nature_per_houses := 4
+
+## Naturalezas exigidas por cada grupo de casas.
+var nature_amount := 2
 
 ## Lado del tile de naturaleza (NxN).
-var nature_size := 2
+var nature_size := 1
 
 ## Lado de las construcciones historicas (NxN).
 var historic_size := 5
+
+## Lado (en tiles) del footprint visual de la estatua (ocupa una tile de 1x1).
+var statue_size := 1.0
+
+## Altura (en metros) a la que se apoya la estatua sobre el terreno.
+var statue_offset_y := 0.0
 
 ## Turistas totales necesarios para desbloquear la primera historica.
 var historic_tourists_1 := 25

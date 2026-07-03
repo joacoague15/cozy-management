@@ -18,6 +18,5 @@ var walk_max := 6.0
 var stay_min := 20.0
 var stay_max := 40.0
 
-## Segundos que tarda una casa sola en generar 1 turista.
-## Una casa con vecino genera al doble de velocidad.
+## Segundos que tarda cada casa en generar 1 turista.
 var spawn_interval := 1.0
