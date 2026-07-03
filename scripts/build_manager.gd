@@ -175,7 +175,7 @@ func _create_ghost() -> void:
 func _update_ghost() -> void:
 	if _selected_type == "":
 		return
-	var ground: Variant = _mouse_to_ground()
+	var ground: Variant = mouse_to_ground()
 	if ground == null:
 		_ghost.visible = false
 		_hover_valid = false
@@ -259,7 +259,7 @@ func _place_building(cell: Vector2i) -> void:
 	buildings_changed.emit()
 
 func _delete_building_under_mouse() -> void:
-	var ground: Variant = _mouse_to_ground()
+	var ground: Variant = mouse_to_ground()
 	if ground == null:
 		return
 	var hit: Vector3 = ground
@@ -362,8 +362,13 @@ func is_historic_placed(variant: int) -> bool:
 
 # ---------------------------------------------------------------------------
 
+## True si hay un tipo de edificio seleccionado para colocar.
+## Lo consulta ModelEditor para no robarle clicks a la construccion.
+func has_selection() -> bool:
+	return _selected_type != ""
+
 ## Proyecta el mouse sobre el plano del terreno (y = 0). Devuelve Vector3 o null.
-func _mouse_to_ground() -> Variant:
+func mouse_to_ground() -> Variant:
 	var camera := get_viewport().get_camera_3d()
 	if camera == null:
 		return null
@@ -407,7 +412,7 @@ func _update_info_label() -> void:
 			HISTORIC_NAMES[2], _historic_status(2),
 			HISTORIC_NAMES[3], _historic_status(3),
 		]
-		+ "Click izq: colocar   |   Click der: cancelar / borrar   |   F1: parametros\n"
+		+ "Click izq: colocar   |   Click der: cancelar / borrar   |   F1: parametros   |   F2: cargar modelo 3D\n"
 		+ "Turistas totales: %d   |   Naturaleza: %d colocadas / %d necesarias%s\n" % [
 			total_tourists(), nature_count(), nature_needed(),
 			"   [SIN TURISTAS NUEVOS: falta naturaleza]" if nature_needed() > nature_count() else "",

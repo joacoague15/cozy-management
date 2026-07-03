@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://b7n1ce8audqbm"]
+[gd_scene load_steps=13 format=3 uid="uid://b7n1ce8audqbm"]
 
 [ext_resource type="Script" path="res://scripts/camera_controller.gd" id="1_cam"]
 [ext_resource type="Script" path="res://scripts/build_manager.gd" id="2_build"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/tourist_manager.gd" id="4_tourists"]
 [ext_resource type="Script" path="res://scripts/tourist_menu.gd" id="5_menu"]
 [ext_resource type="Script" path="res://scripts/dirt_manager.gd" id="6_dirt"]
+[ext_resource type="Script" path="res://scripts/model_editor.gd" id="7_models"]
 
 [sub_resource type="ShaderMaterial" id="terrain_material"]
 shader = ExtResource("3_grid")
@@ -65,6 +66,10 @@ build_manager = NodePath("../BuildManager")
 script = ExtResource("6_dirt")
 build_manager = NodePath("../BuildManager")
 terrain = NodePath("../Terrain")
+
+[node name="ModelEditor" type="Node3D" parent="." node_paths=PackedStringArray("build_manager")]
+script = ExtResource("7_models")
+build_manager = NodePath("../BuildManager")
 
 [node name="TouristMenu" type="CanvasLayer" parent="."]
 script = ExtResource("5_menu")
