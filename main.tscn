@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://b7n1ce8audqbm"]
+[gd_scene load_steps=15 format=3 uid="uid://b7n1ce8audqbm"]
 
 [ext_resource type="Script" path="res://scripts/camera_controller.gd" id="1_cam"]
 [ext_resource type="Script" path="res://scripts/build_manager.gd" id="2_build"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://scripts/status_ui.gd" id="8_status"]
 [ext_resource type="Script" path="res://scripts/terrain_tiles.gd" id="9_terrain"]
 [ext_resource type="Script" path="res://scripts/build_toolbar.gd" id="10_toolbar"]
+[ext_resource type="Script" path="res://scripts/cozy_cursor.gd" id="11_cursor"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 sky_top_color = Color(0.38, 0.55, 0.83, 1)
@@ -36,6 +37,7 @@ shader_parameter/dirt_strength = 0.7
 shader_parameter/grid_extent = 20.0
 
 [node name="Main" type="Node3D"]
+script = ExtResource("11_cursor")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("environment")

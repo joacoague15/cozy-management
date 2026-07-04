@@ -4,10 +4,10 @@ Documentación de los sistemas de juego que complementan a las casas y turistas 
 
 ## Basura
 
-- El mapa arranca limpio. Cada **ventana de 3x3 que contenga al menos `dirt_house_threshold` casas distintas** (por defecto **4**) ensucia **sus 9 tiles completas** (zona oscura dibujada en el shader `shaders/grid.gdshader` con una textura-máscara de 1 pixel por tile). Solo se evalúan ventanas **completamente adentro de la zona desbloqueada**: la basura nunca aparece fuera de ella.
+- El mapa arranca limpio. Cada **ventana de 3x3 que contenga al menos `dirt_house_threshold` casas distintas** (por defecto **4**) ensucia **sus 9 tiles completas** (dibujada en el shader `shaders/grid.gdshader` con una textura-máscara de 1 pixel por tile). La zona sucia no es un cuadrado plano: lleva **manchas orgánicas de ruido, un vaho que deriva lento y una mancha por tile que palpita**, para que se lea claramente como mugre. Solo se evalúan ventanas **completamente adentro de la zona desbloqueada**: la basura nunca aparece fuera de ella.
 - El **tile de limpieza** (tecla **4**, 1x1, celeste) purifica un área de `clean_size` x `clean_size` tiles **centrada en él** (por defecto **5x5**, configurable en el menú F1). Al seleccionarlo, un quad translúcido con pulso suave previsualiza el área que va a purificar.
 - La máscara se **recalcula desde cero** (ventanas sucias menos áreas de limpiadores) cada vez que cambian los edificios o cambian `dirt_house_threshold` / `clean_size` en vivo: borrar un limpiador hace volver la basura.
-- **Una casa con alguna tile sucia deja de generar turistas** hasta que un limpiador purifique la zona.
+- **Una casa con alguna tile sucia deja de generar turistas** hasta que un limpiador purifique la zona. Las casas desactivadas (por suciedad o déficit de naturaleza) se ven **grises/apagadas** (película translúcida animada) y recuperan su color al reactivarse.
 
 ## Naturaleza
 

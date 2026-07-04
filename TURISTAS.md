@@ -8,7 +8,7 @@ Documentación del sistema de turistas: generación, comportamiento y parámetro
 - Si hay **déficit de naturaleza** (ver `SISTEMAS.md`), la generación se **pausa por completo** hasta compensar.
 - El manager acumula `total_spawned` (turistas generados desde el inicio, nunca baja): lo usa el sistema de **construcciones históricas** para sus desbloqueos.
 - Cada casa: **1 turista cada `spawn_interval` segundos** (por defecto **1 seg**), con un **"+1" flotante sobre la casa** como feedback.
-- Una casa con alguna **tile sucia** no genera hasta que un limpiador purifique la zona (ver `SISTEMAS.md`).
+- Una casa con alguna **tile sucia** no genera hasta que un limpiador purifique la zona (ver `SISTEMAS.md`). Las casas que no generan (suciedad o déficit de naturaleza) se ven **grises/apagadas**.
 - El turista aparece **sobre el borde interno de la zona desbloqueada** (nunca fuera del terreno existente) y camina hacia un punto interior al azar (estado `ENTERING`) antes de arrancar su ciclo normal de caminar/pausar.
 - Al borrar una casa, deja de generar (los turistas ya generados siguen su vida normal).
 

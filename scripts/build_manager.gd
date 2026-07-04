@@ -53,6 +53,7 @@ const TRASH_RING_COLOR := Color(0.75, 0.78, 0.72)
 const GHOST_VALID_COLOR := Color(0.3, 0.9, 0.3, 0.45)
 const GHOST_INVALID_COLOR := Color(0.9, 0.25, 0.25, 0.45)
 const CLEAN_PREVIEW_COLOR := Color(0.55, 0.83, 0.93)
+const HOVER_COLOR := Color(1.0, 0.95, 0.8)
 
 ## Lados de las zonas construibles (centradas en la grilla). Se arranca en la
 ## primera; ver _update_unlocks para los requisitos de cada ampliacion.
@@ -75,6 +76,8 @@ var _hover_cell := Vector2i.ZERO
 var _hover_valid := false
 var _area_ghost: MeshInstance3D
 var _area_ghost_material: StandardMaterial3D
+var _hover_marker: MeshInstance3D
+var _hover_marker_material: StandardMaterial3D
 var _templates: Dictionary = {}  # clave de MODEL_PATHS -> Node3D o null
 var _last_statue_size := -1.0
 var _last_statue_offset := 0.0
@@ -90,9 +93,10 @@ func _exit_tree() -> void:
 		if template != null:
 			template.free()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_update_unlocks()
 	_update_ghost()
+	_update_hover_marker(delta)
 	_update_placed_statues()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -213,6 +217,21 @@ func _create_ghost() -> void:
 	_area_ghost.visible = false
 	add_child(_area_ghost)
 
+	# Quad calido que resalta la tile bajo el mouse cuando no hay nada
+	# seleccionado (con seleccion, el fantasma ya marca el lugar).
+	_hover_marker = MeshInstance3D.new()
+	var hover_plane := PlaneMesh.new()
+	hover_plane.size = Vector2(0.94, 0.94)
+	_hover_marker.mesh = hover_plane
+	_hover_marker_material = StandardMaterial3D.new()
+	_hover_marker_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_hover_marker_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_hover_marker_material.albedo_color = HOVER_COLOR
+	hover_plane.material = _hover_marker_material
+	_hover_marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_hover_marker.visible = false
+	add_child(_hover_marker)
+
 func _update_ghost() -> void:
 	if _selected_type == "":
 		return
@@ -256,6 +275,32 @@ func _update_clean_preview() -> void:
 	color.a = 0.16 + 0.07 * sin(Time.get_ticks_msec() / 350.0)
 	_area_ghost_material.albedo_color = color
 	_area_ghost.visible = true
+
+## Resalta la tile desbloqueada bajo el mouse cuando no hay nada seleccionado:
+## un quad crema translucido que sigue al cursor con un lerp corto (se desliza
+## de tile en tile) y respira suave.
+func _update_hover_marker(delta: float) -> void:
+	if _selected_type != "":
+		_hover_marker.visible = false
+		return
+	var ground: Variant = mouse_to_ground()
+	if ground == null:
+		_hover_marker.visible = false
+		return
+	var hit: Vector3 = ground
+	var cell := Vector2i(floori(hit.x), floori(hit.z))
+	if not unlocked_rect().has_point(cell):
+		_hover_marker.visible = false
+		return
+	var target := Vector3(cell.x + 0.5, 0.03, cell.y + 0.5)
+	if _hover_marker.visible:
+		_hover_marker.position = _hover_marker.position.lerp(target, 1.0 - exp(-18.0 * delta))
+	else:
+		_hover_marker.position = target  # Recien aparece: sin deslizar desde lejos.
+	_hover_marker.visible = true
+	var color := HOVER_COLOR
+	color.a = 0.16 + 0.06 * sin(Time.get_ticks_msec() / 300.0)
+	_hover_marker_material.albedo_color = color
 
 func _can_place(cell: Vector2i, size: int) -> bool:
 	if not unlocked_rect().encloses(Rect2i(cell, Vector2i(size, size))):

@@ -18,6 +18,12 @@ const SPAWN_INSET := 0.3
 ## la pantalla no se satura de capsulas.
 const VISUAL_SPAWN_DIVISOR := 4
 
+## Pelicula gris sobre las casas desactivadas (con tiles sucias o deficit de
+## naturaleza): se ven "apagadas" mientras no generan turistas.
+const GRAY_COLOR := Color(0.5, 0.53, 0.6)
+const GRAY_MAX_ALPHA := 0.55
+const GRAY_SMOOTH_SPEED := 5.0
+
 @export var build_manager: Node3D
 @export var dirt_manager: Node
 
@@ -28,20 +34,24 @@ var total_spawned := 0
 ## Acumulador de spawn por casa (instance_id -> progreso 0..1).
 var _spawn_accum: Dictionary = {}
 
+## Estado de agrisado por casa (instance_id -> {factor, material}).
+var _gray: Dictionary = {}
+
 func _ready() -> void:
 	build_manager.buildings_changed.connect(_on_buildings_changed)
 
 func _process(delta: float) -> void:
 	# Con deficit de naturaleza ninguna casa atrae turistas.
-	if build_manager.nature_needed() > build_manager.nature_count():
-		return
+	var deficit: bool = build_manager.nature_needed() > build_manager.nature_count()
 	var interval: float = maxf(TouristConfig.spawn_interval, 0.05)
 	for building in build_manager.get_buildings():
 		if building.is_queued_for_deletion():
 			continue
 		if building.get_meta("type") != build_manager.TYPE_HOUSE:
 			continue
-		if _is_house_dirty(building):
+		var disabled: bool = deficit or _is_house_dirty(building)
+		_update_gray(building, disabled, delta)
+		if disabled:
 			continue
 		var id: int = building.get_instance_id()
 		var accum: float = _spawn_accum.get(id, 0.0) + delta / interval
@@ -50,6 +60,39 @@ func _process(delta: float) -> void:
 			_spawn_tourist()
 			_spawn_feedback(building)
 		_spawn_accum[id] = accum
+
+## Atenua una casa desactivada con una pelicula gris translucida
+## (material_overlay en todas sus mallas) cuyo alfa sube y baja suave: la casa
+## se ve apagada mientras no genera y recupera su color al reactivarse. El
+## overlay se crea recien cuando hace falta y se quita al volver a cero.
+func _update_gray(building: Node3D, disabled: bool, delta: float) -> void:
+	var id: int = building.get_instance_id()
+	if not _gray.has(id):
+		if not disabled:
+			return
+		var material := StandardMaterial3D.new()
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.albedo_color = Color(GRAY_COLOR, 0.0)
+		_gray[id] = {factor = 0.0, material = material}
+		_set_overlay(building, material)
+	var entry: Dictionary = _gray[id]
+	var target := 1.0 if disabled else 0.0
+	var factor: float = lerpf(entry.factor, target, 1.0 - exp(-GRAY_SMOOTH_SPEED * delta))
+	if absf(factor - target) < 0.01:
+		factor = target
+	entry.factor = factor
+	var material: StandardMaterial3D = entry.material
+	material.albedo_color = Color(GRAY_COLOR, GRAY_MAX_ALPHA * factor)
+	if factor == 0.0:
+		_set_overlay(building, null)
+		_gray.erase(id)
+
+## Aplica (o quita, con null) la pelicula gris a todas las mallas de la casa.
+func _set_overlay(node: Node, material: Material) -> void:
+	if node is MeshInstance3D:
+		node.material_overlay = material
+	for child in node.get_children():
+		_set_overlay(child, material)
 
 func _is_house_dirty(building: Node3D) -> bool:
 	if dirt_manager == null:
@@ -120,7 +163,7 @@ func _random_border_point() -> Vector3:
 			return Vector3(hi_x, 0.0, randf_range(lo_z, hi_z))
 
 func _on_buildings_changed() -> void:
-	# Limpia acumuladores de casas que ya no existen.
+	# Limpia acumuladores y agrisados de casas que ya no existen.
 	var valid := {}
 	for building in build_manager.get_buildings():
 		if not building.is_queued_for_deletion():
@@ -128,3 +171,6 @@ func _on_buildings_changed() -> void:
 	for id in _spawn_accum.keys():
 		if not valid.has(id):
 			_spawn_accum.erase(id)
+	for id in _gray.keys():
+		if not valid.has(id):
+			_gray.erase(id)
