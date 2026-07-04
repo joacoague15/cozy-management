@@ -13,6 +13,11 @@ const TouristScript := preload("res://scripts/tourist.gd")
 ## Distancia hacia adentro del borde de la zona a la que aparece cada turista.
 const SPAWN_INSET := 0.3
 
+## Solo 1 de cada N turistas generados aparece caminando en el mapa: el
+## conteo real (total_spawned, el que desbloquea historicas) no cambia, pero
+## la pantalla no se satura de capsulas.
+const VISUAL_SPAWN_DIVISOR := 4
+
 @export var build_manager: Node3D
 @export var dirt_manager: Node
 
@@ -88,11 +93,13 @@ func clean_factor() -> float:
 	return clampf(1.0 - float(dirt_manager.dirty_tile_count()) / house_tiles, 0.0, 1.0)
 
 func _spawn_tourist() -> void:
+	total_spawned += 1
+	if total_spawned % VISUAL_SPAWN_DIVISOR != 0:
+		return
 	var tourist: CharacterBody3D = TouristScript.new()
 	tourist.build_manager = build_manager
 	tourist.position = _random_border_point()
 	add_child(tourist)
-	total_spawned += 1
 
 ## Punto al azar sobre el borde interno de la zona desbloqueada: el turista
 ## aparece siempre sobre terreno que existe.

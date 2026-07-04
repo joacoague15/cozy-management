@@ -29,10 +29,10 @@ var statue_size := 1.0
 var statue_offset_y := 0.0
 
 ## Turistas totales necesarios para desbloquear la primera historica.
-var historic_tourists_1 := 25
+var historic_tourists_1 := 70
 
-## Turistas adicionales (despues de la primera) para la segunda.
-var historic_tourists_2 := 50
+## Turistas adicionales (despues de la primera) para la segunda (400 total).
+var historic_tourists_2 := 330
 
-## Turistas adicionales (despues de la segunda) para la tercera.
-var historic_tourists_3 := 75
+## Turistas adicionales (despues de la segunda) para la tercera (2000 total).
+var historic_tourists_3 := 1600

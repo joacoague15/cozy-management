@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64">
+  <!-- Edificio con ventanas + casa con techo a dos aguas -->
+  <path fill="#ffffff" fill-rule="evenodd" d="M8 12h22v44H8z
+    M12.5 17h5v6h-5z M21 17h5v6h-5z
+    M12.5 27h5v6h-5z M21 27h5v6h-5z
+    M12.5 37h5v6h-5z M21 37h5v6h-5z"/>
+  <path fill="#ffffff" d="M43 18 27 34.5h4V56h24V34.5h4z
+    M39.5 43h7v13h-7z" fill-rule="evenodd"/>
+</svg>

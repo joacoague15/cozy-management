@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dann218enup7v"
-path="res://.godot/imported/Estatua_AlfonsoXIII.fbx-e68e3ea9bbcc3fdda47d2da999d8f8b2.scn"
+uid="uid://hwji3rqqfons"
+path="res://.godot/imported/MOD_Maceta01.fbx-00108da75d0fe56c6a9e0c269d7d3e4a.scn"
 
 [deps]
 
-source_file="res://models/Estatua_AlfonsoXIII.fbx"
-dest_files=["res://.godot/imported/Estatua_AlfonsoXIII.fbx-e68e3ea9bbcc3fdda47d2da999d8f8b2.scn"]
+source_file="res://models/MOD_Maceta01.fbx"
+dest_files=["res://.godot/imported/MOD_Maceta01.fbx-00108da75d0fe56c6a9e0c269d7d3e4a.scn"]
 
 [params]
 

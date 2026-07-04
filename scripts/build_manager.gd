@@ -7,6 +7,7 @@ extends Node3D
 ## construcciones historicas (se desbloquean con turistas totales, una de cada
 ## una; la 6 es la estatua de Alfonso XIII, ocupa 1x1 y construirla amplia la
 ## zona construible). Click izquierdo coloca, click derecho cancela o borra.
+## La barra de botones (build_toolbar.gd) selecciona via select_building().
 
 signal buildings_changed
 
@@ -36,7 +37,19 @@ const HISTORIC_NAMES := {
 	2: "Catedral",
 	3: "Palacio",
 }
-const STATUE_PATH := "res://models/Estatua_AlfonsoXIII.fbx"
+## Modelos FBX que reemplazan a las cajas de color cuando estan disponibles.
+const MODEL_PATHS := {
+	"statue": "res://models/Estatua_AlfonsoXIII.fbx",
+	"mausoleo": "res://models/MOD_Mausoleo.fbx",
+	"arco": "res://models/Arco_Estatua_Alonso_XIII.fbx",
+	"leones": "res://models/Leones_y_plataforma.fbx",
+	"maceta1": "res://models/MOD_Maceta01.fbx",
+	"maceta2": "res://models/MOD_Maceta02.fbx",
+}
+const TRASH_BODY_COLOR := Color(0.23, 0.35, 0.28)
+const TRASH_LID_COLOR := Color(0.16, 0.17, 0.18)
+const TRASH_BASE_COLOR := Color(0.55, 0.55, 0.52)
+const TRASH_RING_COLOR := Color(0.75, 0.78, 0.72)
 const GHOST_VALID_COLOR := Color(0.3, 0.9, 0.3, 0.45)
 const GHOST_INVALID_COLOR := Color(0.9, 0.25, 0.25, 0.45)
 const CLEAN_PREVIEW_COLOR := Color(0.55, 0.83, 0.93)
@@ -63,19 +76,20 @@ var _hover_cell := Vector2i.ZERO
 var _hover_valid := false
 var _area_ghost: MeshInstance3D
 var _area_ghost_material: StandardMaterial3D
-var _statue_template: Node3D
+var _templates: Dictionary = {}  # clave de MODEL_PATHS -> Node3D o null
 var _last_statue_size := -1.0
 var _last_statue_offset := 0.0
 var _unlock_stage := 0
 
 func _ready() -> void:
 	_create_ghost()
-	_load_statue()
+	_load_models()
 	terrain.set_unlocked_rect(unlocked_rect(), false)
 
 func _exit_tree() -> void:
-	if _statue_template != null:
-		_statue_template.free()
+	for template in _templates.values():
+		if template != null:
+			template.free()
 
 func _process(_delta: float) -> void:
 	_update_unlocks()
@@ -279,18 +293,27 @@ func _place_building(cell: Vector2i) -> void:
 		building.add_child(house)
 		# La colision cubre solo el cuerpo (el techo sobresale sin colision).
 		height = house.get_meta("wall_height")
-	elif _selected_type == TYPE_HISTORIC and _selected_variant == 1 and _statue_template != null:
-		building.add_child(_make_statue_visual())
 	else:
-		var mesh_instance := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(side, height, side)
-		var material := StandardMaterial3D.new()
-		material.albedo_color = _selection_color()
-		mesh.material = material
-		mesh_instance.mesh = mesh
-		mesh_instance.position.y = height * 0.5
-		building.add_child(mesh_instance)
+		var visual: Node3D = null
+		match _selected_type:
+			TYPE_CLEANER:
+				visual = _make_trash_can()
+			TYPE_NATURE:
+				visual = _make_nature_visual(size)
+			TYPE_HISTORIC:
+				visual = _make_historic_visual(_selected_variant, size)
+		if visual == null:
+			# Caja de color como fallback si falta el modelo.
+			var mesh_instance := MeshInstance3D.new()
+			var mesh := BoxMesh.new()
+			mesh.size = Vector3(side, height, side)
+			var material := StandardMaterial3D.new()
+			material.albedo_color = _selection_color()
+			mesh.material = material
+			mesh_instance.mesh = mesh
+			mesh_instance.position.y = height * 0.5
+			visual = mesh_instance
+		building.add_child(visual)
 
 	if building is StaticBody3D:
 		var collision := CollisionShape3D.new()
@@ -387,6 +410,14 @@ func historic_threshold(variant: int) -> int:
 func is_historic_unlocked(variant: int) -> bool:
 	return total_tourists() >= historic_threshold(variant)
 
+## Proxima historica sin construir (1=estatua, 2=catedral, 3=palacio); si ya
+## estan todas devuelve 3. La usa la barra de botones para su boton monumento.
+func next_historic_variant() -> int:
+	for variant in [1, 2]:
+		if not is_historic_placed(variant):
+			return variant
+	return 3
+
 func is_historic_placed(variant: int) -> bool:
 	for building in _valid_buildings():
 		if building.get_meta("type") == TYPE_HISTORIC and building.get_meta("variant") == variant:
@@ -426,36 +457,131 @@ func _advance_unlock() -> void:
 	_unlock_stage += 1
 	terrain.set_unlocked_rect(unlocked_rect(), true)
 
-# --- Estatua de Alfonso XIII (historica 1) -----------------------------------
+# --- Modelos FBX de edificios --------------------------------------------------
 
-## Carga el modelo de la estatua una sola vez; cada colocacion lo duplica.
+## Carga cada modelo de MODEL_PATHS una sola vez; cada colocacion lo duplica.
 ## Si el asset no esta importado por el editor, se parsea el FBX en runtime.
-func _load_statue() -> void:
-	if ResourceLoader.exists(STATUE_PATH):
-		var scene: PackedScene = load(STATUE_PATH)
-		if scene != null:
-			_statue_template = scene.instantiate()
-	if _statue_template == null:
-		var doc := FBXDocument.new()
-		var state := FBXState.new()
-		if doc.append_from_file(STATUE_PATH, state) == OK:
-			_statue_template = doc.generate_scene(state)
-	if _statue_template == null:
-		push_warning("No se pudo cargar %s: la historica 1 usara la caja." % STATUE_PATH)
-		return
-	ModelEditor._strip_non_visual_nodes(_statue_template)
-	ModelEditor._enable_vertex_colors(_statue_template)
+func _load_models() -> void:
+	for key in MODEL_PATHS:
+		var path: String = MODEL_PATHS[key]
+		var template: Node3D = null
+		if ResourceLoader.exists(path):
+			var scene: PackedScene = load(path)
+			if scene != null:
+				template = scene.instantiate()
+		if template == null:
+			var doc := FBXDocument.new()
+			var state := FBXState.new()
+			if doc.append_from_file(path, state) == OK:
+				template = doc.generate_scene(state)
+		if template == null:
+			push_warning("No se pudo cargar %s: se usara la caja de color." % path)
+		else:
+			ModelEditor._strip_non_visual_nodes(template)
+			ModelEditor._enable_vertex_colors(template)
+		_templates[key] = template
 
-## Contenedor con el pivote en el centro de la base de la estatua, escalado
-## al footprint configurado (GameConfig.statue_size, ajustable en vivo por F1).
-func _make_statue_visual() -> Node3D:
-	var model := _statue_template.duplicate()
+## Contenedor con el modelo apoyado en y=0 y centrado en su AABB, escalado
+## para que su lado mayor en XZ mida `tiles` tiles. Guarda "fit_scale" (escala
+## que lleva el footprint a 1 tile) para reescalados en vivo. Null si el
+## modelo no se pudo cargar.
+func _make_model_visual(key: String, tiles: float) -> Node3D:
+	var template: Node3D = _templates.get(key)
+	if template == null:
+		return null
+	var model := template.duplicate()
 	var container := Node3D.new()
 	var aabb := ModelEditor._combined_aabb(model, Transform3D.IDENTITY)
 	var center := aabb.get_center()
 	model.position = -Vector3(center.x, aabb.position.y, center.z)
 	container.add_child(model)
-	container.set_meta("fit_scale", 1.0 / maxf(maxf(aabb.size.x, aabb.size.z), 0.001))
+	var fit := 1.0 / maxf(maxf(aabb.size.x, aabb.size.z), 0.001)
+	container.set_meta("fit_scale", fit)
+	container.scale = Vector3.ONE * fit * tiles
+	return container
+
+## Visual de la historica `variant`, o null si faltan sus modelos.
+func _make_historic_visual(variant: int, size: int) -> Node3D:
+	match variant:
+		1:
+			return _make_statue_visual()
+		2:
+			return _make_model_visual("mausoleo", size * 0.95)
+		3:
+			return _make_palace_visual(size)
+	return null
+
+## Palacio (historica 3): composicion dentro del footprint NxN, de atras hacia
+## adelante: el arco, la estatua de Alfonso XIII y los leones con su
+## plataforma. El frente mira a +Z (hacia la camara).
+func _make_palace_visual(size: int) -> Node3D:
+	var arco := _make_model_visual("arco", size * 0.9)
+	var estatua := _make_model_visual("statue", size * 0.22)
+	var leones := _make_model_visual("leones", size * 0.55)
+	if arco == null and estatua == null and leones == null:
+		return null
+	var group := Node3D.new()
+	if arco != null:
+		arco.position.z = -size * 0.25
+		group.add_child(arco)
+	if estatua != null:
+		estatua.position.z = 0.0
+		group.add_child(estatua)
+	if leones != null:
+		leones.position.z = size * 0.3
+		group.add_child(leones)
+	return group
+
+## Parque de naturaleza: base verde plana que cubre las tiles, con una maceta
+## (elegida al azar entre las dos) encima.
+func _make_nature_visual(size: int) -> Node3D:
+	var group := Node3D.new()
+	var base := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(size, NATURE_HEIGHT, size)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = NATURE_COLOR
+	mesh.material = material
+	base.mesh = mesh
+	base.position.y = NATURE_HEIGHT * 0.5
+	group.add_child(base)
+	var pot := _make_model_visual("maceta1" if randi() % 2 == 0 else "maceta2", size * 0.7)
+	if pot != null:
+		pot.position.y = NATURE_HEIGHT
+		group.add_child(pot)
+	return group
+
+## Tacho de basura urbano procedural (limpieza): base de hormigon, cuerpo
+## cilindrico levemente conico con un aro claro y tapa oscura.
+func _make_trash_can() -> Node3D:
+	var group := Node3D.new()
+	group.add_child(_make_cylinder(0.24, 0.24, 0.05, TRASH_BASE_COLOR, 0.025))
+	group.add_child(_make_cylinder(0.2, 0.16, 0.42, TRASH_BODY_COLOR, 0.26))
+	group.add_child(_make_cylinder(0.205, 0.205, 0.04, TRASH_RING_COLOR, 0.4))
+	group.add_child(_make_cylinder(0.22, 0.22, 0.07, TRASH_LID_COLOR, 0.505))
+	return group
+
+func _make_cylinder(top: float, bottom: float, height: float, color: Color, y: float) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = top
+	mesh.bottom_radius = bottom
+	mesh.height = height
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	mesh.material = material
+	mesh_instance.mesh = mesh
+	mesh_instance.position.y = y
+	return mesh_instance
+
+# --- Estatua de Alfonso XIII (historica 1) -----------------------------------
+
+## Contenedor con el pivote en el centro de la base de la estatua, escalado
+## al footprint configurado (GameConfig.statue_size, ajustable en vivo por F1).
+func _make_statue_visual() -> Node3D:
+	var container := _make_model_visual("statue", 1.0)
+	if container == null:
+		return null
 	container.add_to_group("statue_visual")
 	_apply_statue_config(container)
 	return container
@@ -481,6 +607,18 @@ func _update_placed_statues() -> void:
 ## Lo consulta ModelEditor para no robarle clicks a la construccion.
 func has_selection() -> bool:
 	return _selected_type != ""
+
+## Seleccion actual, para que la barra de botones refleje tambien lo que se
+## elige por teclado.
+func selected_type() -> String:
+	return _selected_type
+
+func selected_variant() -> int:
+	return _selected_variant
+
+## Cambia la seleccion desde afuera (barra de botones). Tipo "" deselecciona.
+func select_building(type: String, variant: int) -> void:
+	_select(type, variant)
 
 ## Proyecta el mouse sobre el plano del terreno (y = 0). Devuelve Vector3 o null.
 func mouse_to_ground() -> Variant:

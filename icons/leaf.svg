@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64">
+  <!-- Hoja con vena central calada -->
+  <path fill="#ffffff" fill-rule="evenodd" d="M50 8 C28 10 12 22 12 40 C12 50 18 56 26 56 C44 56 54 36 50 8 Z
+    M44.5 15.5 C40 32 32 44 21 51.5 L19.5 49.5 C30.5 42 38.5 30.5 42.5 15 Z"/>
+</svg>

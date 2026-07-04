@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64">
+  <!-- Obelisco sobre base escalonada (monumento generico) -->
+  <g fill="#ffffff">
+    <path d="M32 4 L37 12 L27 12 Z"/>
+    <path d="M28.4 15 L35.6 15 L37.5 40 L26.5 40 Z"/>
+    <rect x="24" y="43" width="16" height="5"/>
+    <rect x="18" y="50" width="28" height="5"/>
+    <rect x="12" y="57" width="40" height="4"/>
+  </g>
+</svg>
