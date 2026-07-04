@@ -1,6 +1,6 @@
 extends Node
 ## Autoload (TouristConfig): parametros globales de los turistas.
-## El menu F1 modifica estos valores en vivo. Ver TURISTAS.md.
+## Ver TURISTAS.md.
 
 ## Velocidad de caminata (m/s). Se sortea una vez por turista al aparecer.
 var speed_min := 1.0

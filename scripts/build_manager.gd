@@ -58,7 +58,6 @@ const CLEAN_PREVIEW_COLOR := Color(0.55, 0.83, 0.93)
 ## primera; ver _update_unlocks para los requisitos de cada ampliacion.
 const UNLOCK_SIZES: Array[int] = [3, 9, 20]
 
-@export var info_label: Label
 @export var tourist_manager: Node3D
 @export var terrain: TerrainTiles
 ## Margen caminable que deja cada edificio en los bordes de su tile.
@@ -94,7 +93,6 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	_update_unlocks()
 	_update_ghost()
-	_update_info_label()
 	_update_placed_statues()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -227,7 +225,7 @@ func _update_ghost() -> void:
 	var hit: Vector3 = ground
 	var size := _selection_size()
 	var height := _selection_height()
-	# El tamano puede cambiar en vivo desde el menu F1: refrescar siempre.
+	# El tamano puede cambiar en vivo (GameConfig): refrescar siempre.
 	var box: BoxMesh = _ghost.mesh
 	var side := size - building_margin * 2.0
 	box.size = Vector3(side, height, side)
@@ -337,7 +335,52 @@ func _place_building(cell: Vector2i) -> void:
 	building.set_meta("height", height)
 	building.set_meta("type", _selected_type)
 	building.set_meta("variant", _selected_variant)
+	_animate_construction(building)
 	buildings_changed.emit()
+
+# --- Feedback de construccion --------------------------------------------------
+
+## Al construir, las partes del edificio aparecen sobre su posicion final y
+## van cayendo en secuencia (las mas bajas primero), asentandose con un rebote
+## suave. El palacio cae en tres tandas bien marcadas: arco, estatua y leones.
+func _animate_construction(building: Node3D) -> void:
+	var is_palace: bool = building.get_meta("type") == TYPE_HISTORIC \
+			and building.get_meta("variant") == 3
+	var parts := _construction_parts(building)
+	if parts.is_empty():
+		return
+	if not is_palace:
+		parts.sort_custom(func(a: Node3D, b: Node3D) -> bool: return a.position.y < b.position.y)
+	var interval := 0.45 if is_palace else 0.07
+	var drop := 7.0 if is_palace else 4.0
+	var duration := 0.65 if is_palace else 0.5
+	var delay := 0.0
+	for part in parts:
+		var target_y: float = part.position.y
+		part.position.y = target_y + drop
+		part.visible = false
+		var tween := part.create_tween()
+		tween.tween_interval(delay)
+		tween.tween_callback(func() -> void: part.visible = true)
+		tween.tween_property(part, "position:y", target_y, duration) \
+				.set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+		delay += interval
+
+## Nodos que caen por separado. Los grupos visuales (casa, tacho, parque,
+## palacio) se desarman en sus hijos; los contenedores de modelos FBX
+## (tienen "fit_scale") caen enteros para no desarmar el modelo.
+func _construction_parts(building: Node3D) -> Array[Node3D]:
+	var parts: Array[Node3D] = []
+	for child in building.get_children():
+		if child is CollisionShape3D or not child is Node3D:
+			continue
+		if child.has_meta("fit_scale") or child.get_child_count() <= 1:
+			parts.append(child)
+		else:
+			for grandchild in child.get_children():
+				if grandchild is Node3D:
+					parts.append(grandchild)
+	return parts
 
 func _delete_building_under_mouse() -> void:
 	var ground: Variant = mouse_to_ground()
@@ -577,7 +620,7 @@ func _make_cylinder(top: float, bottom: float, height: float, color: Color, y: f
 # --- Estatua de Alfonso XIII (historica 1) -----------------------------------
 
 ## Contenedor con el pivote en el centro de la base de la estatua, escalado
-## al footprint configurado (GameConfig.statue_size, ajustable en vivo por F1).
+## al footprint configurado (GameConfig.statue_size, ajustable en vivo).
 func _make_statue_visual() -> Node3D:
 	var container := _make_model_visual("statue", 1.0)
 	if container == null:
@@ -590,7 +633,7 @@ func _apply_statue_config(container: Node3D) -> void:
 	container.scale = Vector3.ONE * container.get_meta("fit_scale") * GameConfig.statue_size
 	container.position.y = GameConfig.statue_offset_y
 
-## Aplica en vivo los cambios de escala/altura del menu F1 a las estatuas ya
+## Aplica en vivo los cambios de escala/altura de GameConfig a las estatuas ya
 ## colocadas.
 func _update_placed_statues() -> void:
 	if GameConfig.statue_size == _last_statue_size \
@@ -634,46 +677,3 @@ func mouse_to_ground() -> Variant:
 	if t < 0.0:
 		return null
 	return origin + direction * t
-
-func _historic_status(variant: int) -> String:
-	if is_historic_placed(variant):
-		return "construida"
-	if is_historic_unlocked(variant):
-		return "lista!"
-	return "%d turistas" % historic_threshold(variant)
-
-func _update_info_label() -> void:
-	if info_label == null:
-		return
-	var selected_text := "nada (elegi con 1-8)"
-	match _selected_type:
-		TYPE_HOUSE:
-			selected_text = "casa %dx%d" % [_selected_variant, _selected_variant]
-		TYPE_CLEANER:
-			selected_text = "limpieza 1x1 (purifica %dx%d)" % [GameConfig.clean_size, GameConfig.clean_size]
-		TYPE_NATURE:
-			selected_text = "naturaleza %dx%d" % [_selection_size(), _selection_size()]
-		TYPE_HISTORIC:
-			selected_text = "%s %dx%d" % [HISTORIC_NAMES[_selected_variant], _selection_size(), _selection_size()]
-	var error := _selection_error()
-	if error != "":
-		selected_text += "  [BLOQUEADO: %s]" % error
-	var text := (
-		"[1-3] Casa   [4] Limpieza   [5] Naturaleza %dx%d\n" % [_selection_nature_size(), _selection_nature_size()]
-		+ "[6] %s: %s   [7] %s: %s   [8] %s: %s\n" % [
-			HISTORIC_NAMES[1], _historic_status(1),
-			HISTORIC_NAMES[2], _historic_status(2),
-			HISTORIC_NAMES[3], _historic_status(3),
-		]
-		+ "Click izq: colocar   |   Click der: cancelar / borrar   |   F1: parametros   |   F2: cargar modelo 3D\n"
-		+ "Turistas totales: %d   |   Naturaleza: %d colocadas / %d necesarias%s\n" % [
-			total_tourists(), nature_count(), nature_needed(),
-			"   [SIN TURISTAS NUEVOS: falta naturaleza]" if nature_needed() > nature_count() else "",
-		]
-		+ "Seleccionado: " + selected_text
-	)
-	if info_label.text != text:
-		info_label.text = text
-
-func _selection_nature_size() -> int:
-	return maxi(GameConfig.nature_size, 1)

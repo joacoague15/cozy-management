@@ -32,7 +32,7 @@ func _ready() -> void:
 	_recompute()
 
 func _process(_delta: float) -> void:
-	# Los parametros pueden cambiar en vivo desde el menu F1, y la zona
+	# Los parametros de GameConfig pueden cambiar en vivo, y la zona
 	# desbloqueada se amplia al construir monumentos / juntar turistas.
 	if GameConfig.clean_size != _last_clean_size \
 			or GameConfig.dirt_house_threshold != _last_house_threshold \

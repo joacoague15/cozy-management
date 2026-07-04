@@ -1,7 +1,6 @@
 extends Node
 ## Autoload (GameConfig): parametros globales de los sistemas de juego
 ## (suciedad, naturaleza y construcciones historicas).
-## El menu F1 modifica estos valores en vivo.
 
 ## Casas minimas dentro de una ventana de 3x3 para que esa ventana completa
 ## (sus 9 tiles) se vuelva suciedad.
