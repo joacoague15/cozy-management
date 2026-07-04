@@ -1,12 +1,21 @@
 extends Node3D
 ## Camara estilo city-builder.
-## Paneo con WASD/flechas, zoom con la rueda, rotacion manteniendo el boton del medio.
+## Paneo con WASD/flechas, zoom con la rueda, rotacion arrastrando con el
+## boton del medio o con el izquierdo (el izquierdo solo cuando el mouse no
+## esta colocando edificios ni arrastrando modelos; con Alt/Option rota
+## siempre). En trackpad (macOS): pinch = zoom, scroll de dos dedos vertical =
+## zoom, horizontal = rotar (el trackpad no emite eventos de rueda: llegan
+## como gestos Magnify/Pan).
 ## El pitch y el zoom estan acotados para que la camara nunca baje del terreno.
 
 @export var move_speed := 15.0
 @export var rotate_sensitivity := 0.005
 @export var pitch_sensitivity := 0.005
 @export var zoom_step := 1.15
+## Zoom por unidad de scroll vertical de dos dedos (negativo para invertir).
+@export var pan_zoom_sensitivity := 0.12
+## Radianes de giro por unidad de scroll horizontal de dos dedos.
+@export var pan_rotate_sensitivity := 0.008
 @export var min_zoom := 5.0
 @export var max_zoom := 40.0
 ## Angulo minimo/maximo mirando hacia abajo, en grados sobre el horizonte.
@@ -16,6 +25,10 @@ extends Node3D
 ## Limites de paneo (en el plano XZ), con un margen alrededor del terreno.
 @export var bounds_min := Vector2(-3.0, -3.0)
 @export var bounds_max := Vector2(23.0, 23.0)
+## Para saber si el click izquierdo esta ocupado por el gameplay (colocar
+## edificios / arrastrar modelos) antes de usarlo para rotar la camara.
+@export var build_manager: Node3D
+@export var model_editor: Node3D
 
 @onready var _pitch_node: Node3D = $Pitch
 @onready var _camera: Camera3D = $Pitch/Camera3D
@@ -42,13 +55,40 @@ func _unhandled_input(event: InputEvent) -> void:
 			_target_zoom = clampf(_target_zoom / zoom_step, min_zoom, max_zoom)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_target_zoom = clampf(_target_zoom * zoom_step, min_zoom, max_zoom)
-	elif event is InputEventMouseMotion and event.button_mask & MOUSE_BUTTON_MASK_MIDDLE:
+	elif event is InputEventMagnifyGesture:
+		# Pinch del trackpad: factor > 1 acerca, < 1 aleja.
+		_target_zoom = clampf(_target_zoom / event.factor, min_zoom, max_zoom)
+	elif event is InputEventPanGesture:
+		# Scroll de dos dedos del trackpad: vertical = zoom, horizontal = rotar.
+		_target_zoom = clampf(
+			_target_zoom * pow(zoom_step, event.delta.y * pan_zoom_sensitivity),
+			min_zoom,
+			max_zoom
+		)
+		_target_yaw -= event.delta.x * pan_rotate_sensitivity
+	elif event is InputEventMouseMotion and _is_rotate_drag(event):
 		_target_yaw -= event.relative.x * rotate_sensitivity
 		_target_pitch = clampf(
 			_target_pitch + event.relative.y * pitch_sensitivity,
 			deg_to_rad(min_pitch_deg),
 			deg_to_rad(max_pitch_deg)
 		)
+
+## Arrastre que rota la camara: boton del medio siempre; click izquierdo
+## cuando el mouse esta libre (sin edificio seleccionado para colocar y sin
+## modelo en colocacion/arrastre). Con Alt/Option el izquierdo rota siempre.
+func _is_rotate_drag(event: InputEventMouseMotion) -> bool:
+	if event.button_mask & MOUSE_BUTTON_MASK_MIDDLE:
+		return true
+	if not event.button_mask & MOUSE_BUTTON_MASK_LEFT:
+		return false
+	if event.alt_pressed:
+		return true
+	if build_manager != null and build_manager.has_selection():
+		return false
+	if model_editor != null and model_editor.is_mouse_busy():
+		return false
+	return true
 
 func _read_movement(delta: float) -> void:
 	var input_dir := Input.get_vector("cam_left", "cam_right", "cam_forward", "cam_back")

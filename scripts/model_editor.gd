@@ -45,6 +45,11 @@ func _process(_delta: float) -> void:
 		if ground != null:
 			_move_active_to(ground)
 
+## True si el mouse esta ocupado con un modelo (colocandolo o arrastrandolo).
+## Lo consulta la camara para no rotar con el arrastre izquierdo mientras tanto.
+func is_mouse_busy() -> bool:
+	return _mode == Mode.PLACING or _dragging
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:

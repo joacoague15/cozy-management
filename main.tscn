@@ -48,9 +48,11 @@ shadow_enabled = true
 material_override = SubResource("terrain_material")
 script = ExtResource("9_terrain")
 
-[node name="CameraRig" type="Node3D" parent="."]
+[node name="CameraRig" type="Node3D" parent="." node_paths=PackedStringArray("build_manager", "model_editor")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 10)
 script = ExtResource("1_cam")
+build_manager = NodePath("../BuildManager")
+model_editor = NodePath("../ModelEditor")
 
 [node name="Pitch" type="Node3D" parent="CameraRig"]
 
