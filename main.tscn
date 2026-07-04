@@ -80,11 +80,11 @@ terrain = NodePath("../Terrain")
 script = ExtResource("7_models")
 build_manager = NodePath("../BuildManager")
 
-[node name="StatusUI" type="CanvasLayer" parent="." node_paths=PackedStringArray("tourist_manager", "build_manager")]
+[node name="StatusUI" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager")]
 script = ExtResource("8_status")
-tourist_manager = NodePath("../TouristManager")
 build_manager = NodePath("../BuildManager")
 
-[node name="BuildToolbar" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager")]
+[node name="BuildToolbar" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager", "tourist_manager")]
 script = ExtResource("10_toolbar")
 build_manager = NodePath("../BuildManager")
+tourist_manager = NodePath("../TouristManager")

@@ -475,19 +475,6 @@ func unlocked_rect() -> Rect2i:
 	var start := (GRID_SIZE - side) / 2
 	return Rect2i(start, start, side, side)
 
-func unlocked_side() -> int:
-	return UNLOCK_SIZES[_unlock_stage]
-
-## Que falta para la proxima ampliacion de zona ("" si esta todo abierto).
-## Lo muestra el StatusUI.
-func next_zone_requirement() -> String:
-	match _unlock_stage:
-		0:
-			return "construi la estatua (%d turistas)" % historic_threshold(1)
-		1:
-			return "construi la catedral (%d turistas)" % historic_threshold(2)
-	return ""
-
 ## Cada ampliacion se dispara al CONSTRUIR un monumento: la estatua abre la
 ## zona 9x9 y la catedral la 20x20.
 func _update_unlocks() -> void:

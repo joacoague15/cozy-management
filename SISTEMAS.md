@@ -13,7 +13,7 @@ Documentación de los sistemas de juego que complementan a las casas y turistas 
 
 - Cada **`nature_per_houses` casas colocadas** (por defecto **4**) se exigen **`nature_amount` tiles de naturaleza** (por defecto **2**, tecla **5**).
 - La naturaleza mide `nature_size` x `nature_size` (por defecto **1x1**, configurable) y es un parque plano **sin colisión**: los turistas la atraviesan.
-- Las casas **siempre se pueden colocar**. Si hay déficit (`naturalezas colocadas < floor(casas / nature_per_houses) * nature_amount`), **ninguna casa genera turistas** hasta compensar. El HUD lo avisa con `[SIN TURISTAS NUEVOS: falta naturaleza]` y la barra "Naturaleza" del panel de estado muestra el avance.
+- Las casas **siempre se pueden colocar**. Si hay déficit (`naturalezas colocadas < floor(casas / nature_per_houses) * nature_amount`), **ninguna casa genera turistas** hasta compensar. El HUD lo avisa con `[SIN TURISTAS NUEVOS: falta naturaleza]` y el **relleno del botón de naturaleza** (barra de construcción) se vacía suavemente y pulsa en rojo; el botón de limpieza hace lo mismo con la suciedad.
 
 ## Generación de turistas
 
@@ -45,6 +45,7 @@ Tres construcciones únicas que se desbloquean con **turistas totales acumulados
 - Cada histórica se puede construir **una sola vez** (si se borra, se puede volver a construir).
 - La estatua usa `models/Estatua_AlfonsoXIII.fbx`; su escala (`statue_size`, en tiles) y altura de apoyo (`statue_offset_y`) se ajustan en vivo desde F1.
 - El HUD muestra el estado de cada una: turistas requeridos, "lista!" o "construida".
+- El **botón de monumento** de la barra de construcción representa siempre la próxima histórica sin construir: mientras faltan turistas está **deshabilitado** y se llena de dorado según el progreso; al desbloquearse hace un "pop" y su borde pulsa dorado hasta construirla.
 
 ## Parámetros (menú F1)
 
@@ -74,5 +75,6 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, estatua FBX, HUD |
 | `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta) |
 | `scripts/tourist_manager.gd` | Spawn por casa (1/s), gates de suciedad/naturaleza, "+1" flotante, `total_spawned` |
-| `scripts/status_ui.gd` | Panel de estado: turistas, zona actual y barras de naturaleza/limpieza |
+| `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
+| `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza y botón de monumento con progreso |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |
