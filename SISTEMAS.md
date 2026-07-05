@@ -80,5 +80,5 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
 | `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza y botón de monumento con progreso |
 | `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo) y música de fondo en loop |
-| `scripts/question_button.gd` | Botón "?" abajo a la derecha: aparece al azar, al presionarlo muestra una curiosidad del Retiro (4 textos sorteados sin repetir) apoyada en el suelo al costado de la zona jugable por 10 seg |
+| `scripts/question_button.gd` | Personaje consejero (character.png) abajo a la derecha: aparece al colocar el primer monumento con una curiosidad del Retiro en una burbuja de diálogo a su izquierda (título "¡Lo estás increíble!" la primera vez, "Sabías que..." después; 4 textos sorteados sin repetir, 10 seg), y reaparece cada 12-18 seg con el siguiente |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |

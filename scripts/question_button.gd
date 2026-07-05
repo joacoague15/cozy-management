@@ -1,13 +1,20 @@
 extends CanvasLayer
-## Boton de pregunta abajo a la derecha: aparece en momentos aleatorios de
-## la partida (con un pop de escala). Al presionarlo desaparece (mas tarde
-## puede volver a aparecer) y muestra un texto apoyado en el piso al costado
-## de la zona jugable — nunca encima de ella — que se desvanece a los 10 seg.
+## Personaje consejero abajo a la derecha: cuando se coloca el primer
+## monumento, character.png asoma desde el borde inferior derecho junto a una
+## burbuja de dialogo a su izquierda (papel calido semitransparente, titulo en
+## negrita y texto oscuro) con las curiosidades del Retiro, a modo de
+## instructivo. El consejo se desvanece solo y el personaje reaparece cada
+## APPEAR_MIN-APPEAR_MAX segundos con el siguiente.
 
-## Intervalos de aparicion (los originales 15-45 reducidos un 30%).
-const APPEAR_MIN := 11.5
-const APPEAR_MAX := 34.5
+const APPEAR_MIN := 12.0
+const APPEAR_MAX := 18.0
 const MESSAGE_SECONDS := 10.0
+## Relacion ancho/alto de character.png (446x1072).
+const CHARACTER_ASPECT := 446.0 / 1072.0
+
+## Titulo del primer consejo y de todos los siguientes.
+const FIRST_TITLE := "¡Lo estás increíble!"
+const NEXT_TITLE := "Sabías que..."
 
 ## Curiosidades del Retiro: se sortean sin repetir hasta agotar la lista
 ## (recien ahi se vuelve a barajar).
@@ -20,113 +27,164 @@ const MESSAGES: Array[String] = [
 
 @export var build_manager: Node3D
 
-var _button: Button
+var _root: Control
+var _character: TextureRect
+var _bubble: Panel
+var _title: Label
+var _label: Label
 var _appear_timer := 0.0
 var _active := false
+var _started := false
+var _showing := false
+var _tips_shown := 0
 var _pending_messages: Array[String] = []
+var _character_base := Vector2.ZERO
 
 func _ready() -> void:
 	# Arranca oculto e inactivo: el menu inicial lo activa con begin().
 	visible = false
-	_appear_timer = randf_range(APPEAR_MIN, APPEAR_MAX)
-	_button = Button.new()
-	_button.focus_mode = Control.FOCUS_NONE
-	_button.visible = false
-	if ResourceLoader.exists("res://icons/question.svg"):
-		_button.icon = load("res://icons/question.svg")
-		_button.expand_icon = true
-		_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	else:
-		_button.text = "?"
-	_button.pressed.connect(_on_pressed)
-	add_child(_button)
+
+	_root = Control.new()
+	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_root)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	_character = TextureRect.new()
+	_character.texture = load("res://character.png")
+	_character.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_character.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	_character.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_character.modulate.a = 0.0
+	_root.add_child(_character)
+
+	_bubble = Panel.new()
+	_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bubble.modulate.a = 0.0
+	_root.add_child(_bubble)
+
+	_title = Label.new()
+	_title.add_theme_font_override("font", load("res://fonts/ComicNeue-Bold.ttf"))
+	_title.add_theme_color_override("font_color", Color(0.1, 0.08, 0.05, 0.95))
+	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bubble.add_child(_title)
+
+	_label = Label.new()
+	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label.add_theme_color_override("font_color", Color(0.1, 0.08, 0.05, 0.9))
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bubble.add_child(_label)
+
 	get_viewport().size_changed.connect(_update_layout)
 	_update_layout()
 
-## Lo llama el menu inicial al empezar la partida: recien ahi corre el
-## sorteo de aparicion.
+## Lo llama el menu inicial al empezar la partida. El personaje recien se
+## muestra cuando el jugador coloca el primer monumento.
 func begin() -> void:
 	visible = true
 	_active = true
-	_appear_timer = randf_range(APPEAR_MIN, APPEAR_MAX)
 
 func _process(delta: float) -> void:
-	if not _active or _button.visible:
+	if not _active or _showing:
+		return
+	if not _started:
+		# El primer consejo sale junto con el primer monumento.
+		if build_manager.is_historic_placed(1):
+			_started = true
+			_show_tip()
 		return
 	_appear_timer -= delta
 	if _appear_timer <= 0.0:
-		_show_button()
+		_show_tip()
 
-## Aparece con un pop suave para que se note sin ser invasivo.
-func _show_button() -> void:
-	_button.visible = true
-	_button.pivot_offset = _button.size / 2.0
-	_button.scale = Vector2.ONE * 0.2
-	var tween := _button.create_tween()
-	tween.tween_property(_button, "scale", Vector2.ONE, 0.45) \
-			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-func _on_pressed() -> void:
-	Sfx.play("select", 0.04)
-	_button.visible = false
-	_appear_timer = randf_range(APPEAR_MIN, APPEAR_MAX)
-	_show_message()
-
-## Texto 3D al costado de la zona desbloqueada, del lado de la camara (+Z):
-## siempre queda pegado al borde pero fuera de las tiles jugables. Va acostado
-## en paralelo al terreno, como si estuviera pintado en el suelo, con el tope
-## del texto hacia el mapa para leerse derecho desde la camara.
-func _show_message() -> void:
+## El personaje asoma desde el borde con un fade suave y la burbuja aparece
+## apenas despues; todo se desvanece solo pasados MESSAGE_SECONDS.
+func _show_tip() -> void:
+	_showing = true
 	if _pending_messages.is_empty():
 		_pending_messages = MESSAGES.duplicate()
 		_pending_messages.shuffle()
-	var rect: Rect2i = build_manager.unlocked_rect()
-	var label := Label3D.new()
-	label.text = _pending_messages.pop_back()
-	label.font = preload("res://fonts/cozy_font.tres")
-	label.font_size = 48
-	label.pixel_size = 0.005
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.width = 800
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.modulate = Color(1.0, 0.97, 0.88)
-	label.outline_modulate = Color(0.25, 0.17, 0.1)
-	label.outline_size = 10
-	label.rotation_degrees.x = -90.0
-	label.position = Vector3(rect.position.x + rect.size.x * 0.5, 0.05, rect.end.y + 1.6)
-	get_tree().current_scene.add_child(label)
+	_title.text = FIRST_TITLE if _tips_shown == 0 else NEXT_TITLE
+	_label.text = _pending_messages.pop_back()
+	_tips_shown += 1
+	_layout_bubble()
 
-	label.modulate.a = 0.0
-	var tween := label.create_tween()
-	tween.tween_property(label, "modulate:a", 1.0, 0.5).set_ease(Tween.EASE_OUT)
-	tween.tween_interval(MESSAGE_SECONDS - 1.5)
-	tween.tween_property(label, "modulate:a", 0.0, 1.0).set_ease(Tween.EASE_IN)
-	tween.tween_callback(label.queue_free)
+	var slide := _character.size.y * 0.25
+	_character.position = _character_base + Vector2(0, slide)
+	var tween := create_tween()
+	tween.tween_property(_character, "modulate:a", 1.0, 0.6) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(_character, "position:y", _character_base.y, 0.6) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(_bubble, "modulate:a", 1.0, 0.9).set_delay(0.35)
+	tween.tween_interval(MESSAGE_SECONDS)
+	tween.tween_property(_character, "modulate:a", 0.0, 0.8).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(_character, "position:y", _character_base.y + slide, 0.8) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(_bubble, "modulate:a", 0.0, 0.8).set_ease(Tween.EASE_IN)
+	tween.tween_callback(_on_tip_hidden)
 
-## Mismo criterio de tamano que la barra de construccion: fraccion del alto
-## del viewport, anclado abajo a la izquierda.
+func _on_tip_hidden() -> void:
+	_showing = false
+	_appear_timer = randf_range(APPEAR_MIN, APPEAR_MAX)
+
+## Mismo criterio de tamano que el resto de la UI: fraccion del alto del
+## viewport. Personaje pegado al borde inferior derecho; burbuja a su
+## izquierda, apoyada abajo.
 func _update_layout() -> void:
 	var vh := get_viewport().get_visible_rect().size.y
 	var vw := get_viewport().get_visible_rect().size.x
-	var side := maxf(vh * 0.09, 56.0)
-	_button.custom_minimum_size = Vector2(side, side)
-	_button.size = Vector2(side, side)
-	_button.position = Vector2(vw - side * 1.25, vh - side * 1.25)
 
-	var normal := _make_style(side, Color(0, 0, 0, 0.4), Color(1, 1, 1, 0.12))
-	_button.add_theme_stylebox_override("normal", normal)
-	_button.add_theme_stylebox_override(
-		"hover", _make_style(side, Color(0.16, 0.16, 0.16, 0.55), Color(1, 1, 1, 0.25))
-	)
-	_button.add_theme_stylebox_override(
-		"pressed", _make_style(side, Color(0.12, 0.25, 0.12, 0.75), Color(0.65, 0.9, 0.6))
+	var char_height := vh * 0.38
+	var char_width := char_height * CHARACTER_ASPECT
+	_character.size = Vector2(char_width, char_height)
+	_character_base = Vector2(vw - char_width - vw * 0.005, vh - char_height)
+	if not _showing:
+		_character.position = _character_base
+
+	_title.add_theme_font_size_override("font_size", roundi(vh * 0.03))
+	_label.add_theme_font_size_override("font_size", roundi(vh * 0.026))
+	_bubble.add_theme_stylebox_override("panel", _make_bubble_style(vh))
+	_layout_bubble()
+
+## La altura de la burbuja se ajusta al contenido: titulo de una linea mas el
+## texto medido con la fuente al ancho disponible.
+func _layout_bubble() -> void:
+	var vh := get_viewport().get_visible_rect().size.y
+	var vw := get_viewport().get_visible_rect().size.x
+	var margin := vh * 0.022
+	var gap := vh * 0.008
+	var bubble_width := vw * 0.3
+	var inner_width := bubble_width - margin * 2.0
+
+	var title_font := _title.get_theme_font("font")
+	var title_font_size := roundi(vh * 0.03)
+	var title_height := title_font.get_string_size(
+		_title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, title_font_size
+	).y
+	var body_font := _label.get_theme_font("font")
+	var body_font_size := roundi(vh * 0.026)
+	var body_height := body_font.get_multiline_string_size(
+		_label.text, HORIZONTAL_ALIGNMENT_LEFT, inner_width, body_font_size
+	).y
+
+	_title.position = Vector2(margin, margin)
+	_title.size = Vector2(inner_width, title_height)
+	_label.position = Vector2(margin, margin + title_height + gap)
+	_label.size = Vector2(inner_width, body_height)
+	_bubble.size = Vector2(bubble_width, margin * 2.0 + title_height + gap + body_height)
+	_bubble.position = Vector2(
+		_character_base.x - bubble_width - vw * 0.012,
+		vh - _bubble.size.y - vh * 0.06
 	)
 
-func _make_style(side: float, bg: Color, border: Color) -> StyleBoxFlat:
+## Fondo tipo papel calido semitransparente con esquinas redondeadas y una
+## sombra suave, para que el texto se lea sobre el verde del terreno.
+func _make_bubble_style(vh: float) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = bg
-	style.border_color = border
-	style.set_border_width_all(maxi(roundi(side * 0.035), 2))
-	style.set_corner_radius_all(roundi(side * 0.5))
-	style.set_content_margin_all(side * 0.2)
+	style.bg_color = Color(1.0, 0.98, 0.92, 0.85)
+	style.border_color = Color(0.35, 0.28, 0.18, 0.35)
+	style.set_border_width_all(maxi(roundi(vh * 0.002), 1))
+	style.set_corner_radius_all(roundi(vh * 0.02))
+	style.shadow_color = Color(0, 0, 0, 0.18)
+	style.shadow_size = maxi(roundi(vh * 0.008), 4)
 	return style
