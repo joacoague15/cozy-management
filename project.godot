@@ -28,6 +28,10 @@ Sfx="*res://scripts/sfx.gd"
 
 window/size/mode=3
 
+[gui]
+
+theme/custom_font="res://fonts/cozy_font.tres"
+
 [input]
 
 cam_forward={

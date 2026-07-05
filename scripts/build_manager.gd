@@ -342,6 +342,9 @@ func _place_building(cell: Vector2i) -> void:
 		building.add_child(house)
 		# La colision cubre solo el cuerpo (el techo sobresale sin colision).
 		height = house.get_meta("wall_height")
+		# Que prop salio ("banco1", "puesto", ...; "" = casa procedural): lo
+		# usa TouristManager para sentar turistas y armar la fila de comida.
+		building.set_meta("prop", house.get_meta("prop", ""))
 	else:
 		var visual: Node3D = null
 		match _selected_type:
@@ -698,6 +701,7 @@ func _make_cartel_visual() -> Node3D:
 	var aabb := ModelEditor._combined_aabb(cartel, Transform3D.IDENTITY)
 	var label := Label3D.new()
 	label.text = "Parque de\nEl Retiro\ncoming soon..."
+	label.font = preload("res://fonts/cozy_font.tres")
 	label.font_size = 56
 	label.pixel_size = 0.0016
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -729,6 +733,7 @@ func _make_house_visual(size: int) -> Node3D:
 		if prop != null:
 			var aabb := ModelEditor._combined_aabb(prop, Transform3D.IDENTITY)
 			prop.set_meta("wall_height", maxf(aabb.end.y, 0.4))
+			prop.set_meta("prop", key)
 			return prop
 	return HouseGenerator.build(_selected_variant, size, building_margin)
 

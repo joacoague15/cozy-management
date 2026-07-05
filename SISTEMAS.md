@@ -76,5 +76,6 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/tourist_manager.gd` | Spawn por casa (1/s), gates de suciedad/naturaleza, "+1" flotante, `total_spawned` |
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
 | `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza y botón de monumento con progreso |
-| `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo) |
+| `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo) y música de fondo en loop |
+| `scripts/question_button.gd` | Botón "?" abajo a la izquierda: aparece al azar, al presionarlo muestra un texto 3D al costado de la zona jugable por 10 seg |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |

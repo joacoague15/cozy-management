@@ -14,12 +14,13 @@ Documentación del sistema de turistas: generación, comportamiento y parámetro
 
 ## Comportamiento del turista
 
-Cada turista es un `CharacterBody3D` (cápsula de color aleatorio) con una máquina de estados:
+Cada turista es un `CharacterBody3D` (personita low-poly de tres piezas: pantalón, remera y cabeza, con colores sorteados de paletas fijas; las mallas y materiales son compartidos entre todos los turistas para no gastar recursos) con una máquina de estados. Al caminar rebota sutilmente al ritmo del paso:
 
 1. **Entrando** (`ENTERING`): aparece en el borde de la zona desbloqueada y camina derecho hacia un punto interior al azar; al estar adentro pasa a caminar. Si una casa del borde lo frena, apunta a otro punto interior.
 2. **Caminando** (`WALKING`): elige una dirección al azar y camina en línea recta durante un tiempo sorteado entre `walk_min` y `walk_max` segundos.
 3. **Quieto** (`IDLE`): se frena durante un tiempo sorteado entre `idle_min` e `idle_max` segundos, y vuelve a caminar.
 4. **Yéndose** (`LEAVING`): cuando se agota su estadía (sorteada entre `stay_min` y `stay_max` al aparecer), se encoge durante 0.6 seg y desaparece. Esto mantiene la población en equilibrio.
+5. **Tareas** (`SEEKING` → `TASK`): el `TouristManager` puede mandar a un turista libre a un punto fijo. Si hay un **banco** (prop de casa), **un único turista a la vez** camina hasta él y se sienta arriba 8-14 seg. Si hay un **puesto de comida**, cada 20-40 seg se arma una **fila de 3 a 6 turistas** frente al mostrador durante 10-15 seg. Mientras dura la tarea no colisionan con casas (para llegar a lugares pegados a un edificio) y al terminar vuelven a deambular.
 
 Reglas de movimiento:
 

@@ -37,6 +37,13 @@ var _spawn_accum: Dictionary = {}
 ## Estado de agrisado por casa (instance_id -> {factor, material}).
 var _gray: Dictionary = {}
 
+## Turista sentado (o yendo a sentarse) en un banco: solo uno a la vez.
+var _sitter: CharacterBody3D
+var _bench_retry := 0.0
+
+## Cuenta regresiva para la proxima fila de comida en el puesto.
+var _queue_timer := 20.0
+
 func _ready() -> void:
 	build_manager.buildings_changed.connect(_on_buildings_changed)
 
@@ -60,6 +67,71 @@ func _process(delta: float) -> void:
 			_spawn_tourist()
 			_spawn_feedback(building)
 		_spawn_accum[id] = accum
+
+	_update_bench(delta)
+	_update_food_queue(delta)
+
+# --- Banco: un unico turista se acerca y se sienta arriba -------------------
+
+func _update_bench(delta: float) -> void:
+	if _sitter != null and (not is_instance_valid(_sitter) or not _sitter.is_on_task()):
+		_sitter = null
+	_bench_retry -= delta
+	if _bench_retry > 0.0 or _sitter != null:
+		return
+	_bench_retry = 2.0
+	var bench := _find_prop_building("banco")
+	if bench == null:
+		return
+	var tourist := _random_free_tourist()
+	if tourist == null:
+		return
+	# Se sienta en el centro del banco, con el cuerpo apoyado en su tope.
+	tourist.assign_task(bench.position, randf_range(8.0, 14.0), bench.get_meta("height"))
+	_sitter = tourist
+
+# --- Puesto de comida: cada tanto se arma una fila de 3 a 6 -----------------
+
+func _update_food_queue(delta: float) -> void:
+	_queue_timer -= delta
+	if _queue_timer > 0.0:
+		return
+	_queue_timer = randf_range(20.0, 40.0)
+	var stand := _find_prop_building("puesto")
+	if stand == null:
+		return
+	var free: Array = get_tree().get_nodes_in_group("tourists").filter(
+		func(t: Node) -> bool: return t.is_free() and t != _sitter
+	)
+	if free.size() < 3:
+		return
+	free.shuffle()
+	var count: int = mini(free.size(), randi_range(3, 6))
+	var duration := randf_range(10.0, 15.0)
+	# Fila hacia +Z (el frente del puesto, mirando a la camara), desde el
+	# mostrador hacia afuera.
+	var size: int = stand.get_meta("size")
+	var front_z: float = stand.position.z + size * 0.5 + 0.2
+	for i in count:
+		var slot := Vector3(stand.position.x, 0.0, front_z + i * 0.3)
+		free[i].assign_task(slot, duration)
+
+## Edificio tipo casa cuyo prop empieza con `prefix` ("banco" matchea banco1 y
+## banco2), elegido al azar si hay varios. Null si no hay ninguno.
+func _find_prop_building(prefix: String) -> Node3D:
+	var found: Array[Node3D] = []
+	for building in build_manager.get_buildings():
+		if building.is_queued_for_deletion():
+			continue
+		if String(building.get_meta("prop", "")).begins_with(prefix):
+			found.append(building)
+	return found.pick_random() if not found.is_empty() else null
+
+func _random_free_tourist() -> CharacterBody3D:
+	var free: Array = get_tree().get_nodes_in_group("tourists").filter(
+		func(t: Node) -> bool: return t.is_free()
+	)
+	return free.pick_random() if not free.is_empty() else null
 
 ## Atenua una casa desactivada con una pelicula gris translucida
 ## (material_overlay en todas sus mallas) cuyo alfa sube y baja suave: la casa
@@ -106,6 +178,7 @@ func _is_house_dirty(building: Node3D) -> bool:
 func _spawn_feedback(building: Node3D) -> void:
 	var label := Label3D.new()
 	label.text = "+1"
+	label.font = preload("res://fonts/cozy_font.tres")
 	label.font_size = 64
 	label.modulate = Color(1.0, 1.0, 0.85)
 	label.outline_size = 16
