@@ -40,7 +40,7 @@ Tres construcciones únicas que se desbloquean con **turistas totales acumulados
 |---|---|---|---|---|
 | 6 | Cartel "Parque de el Retiro coming soon..." (`CartelT1.fbx`) | 1x1 | `historic_tourists_1` — **construirlo abre la zona 9x9** | 25 |
 | 7 | Catedral | 3x3 | `historic_tourists_1 + historic_tourists_2` — **construirla abre la zona 20x20** | 25 + 50 = 75 |
-| 8 | Palacio | 5x5 | suma de las tres | 25 + 50 + 75 = 150 |
+| 8 | Palacio (arco + estatua + leones, con un estanque al frente: agua animada, totoras, nenúfares y a veces una barca) | 5x5 | suma de las tres | 25 + 50 + 75 = 150 |
 
 - Cada histórica se puede construir **una sola vez** (si se borra, se puede volver a construir).
 - El cartel usa `models/CartelT1.fbx` con un **texto flotante** ("Parque de el Retiro coming soon...") sobre el modelo. La estatua de Alfonso XIII (`Estatua_AlfonsoXIII.fbx`) ahora aparece solo dentro de la composición del palacio.
@@ -78,5 +78,5 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
 | `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza y botón de monumento con progreso |
 | `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo) y música de fondo en loop |
-| `scripts/question_button.gd` | Botón "?" abajo a la derecha: aparece al azar, al presionarlo muestra un texto apoyado en el suelo al costado de la zona jugable por 10 seg |
+| `scripts/question_button.gd` | Botón "?" abajo a la derecha: aparece al azar, al presionarlo muestra una curiosidad del Retiro (4 textos sorteados sin repetir) apoyada en el suelo al costado de la zona jugable por 10 seg |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |

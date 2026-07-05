@@ -4,16 +4,26 @@ extends CanvasLayer
 ## puede volver a aparecer) y muestra un texto apoyado en el piso al costado
 ## de la zona jugable — nunca encima de ella — que se desvanece a los 10 seg.
 
-const APPEAR_MIN := 15.0
-const APPEAR_MAX := 45.0
-const MESSAGE := "esto es un ejemplo"
+## Intervalos de aparicion (los originales 15-45 reducidos un 30%).
+const APPEAR_MIN := 11.5
+const APPEAR_MAX := 34.5
 const MESSAGE_SECONDS := 10.0
+
+## Curiosidades del Retiro: se sortean sin repetir hasta agotar la lista
+## (recien ahi se vuelve a barajar).
+const MESSAGES: Array[String] = [
+	"El Palacio de Cristal fue construida en el siglo XIX. Hoy alberga exposiciones de arte junto a un hermoso estanque.",
+	"El Palacio de Velázquez fue diseñado por Ricardo Velázquez Bosco. Actualmente funciona como sala de exposiciones.",
+	"La estatua del Ángel Caído es una de las pocas esculturas dedicadas a Lucifer y se encuentra a 666 metros sobre el nivel del mar.",
+	"La Fuente de los Galápagos fue creada para celebrar el primer año de vida de la reina Isabel II. Está decorada con tortugas y delfines.",
+]
 
 @export var build_manager: Node3D
 
 var _button: Button
 var _appear_timer := 0.0
 var _active := false
+var _pending_messages: Array[String] = []
 
 func _ready() -> void:
 	# Arranca oculto e inactivo: el menu inicial lo activa con begin().
@@ -67,17 +77,23 @@ func _on_pressed() -> void:
 ## en paralelo al terreno, como si estuviera pintado en el suelo, con el tope
 ## del texto hacia el mapa para leerse derecho desde la camara.
 func _show_message() -> void:
+	if _pending_messages.is_empty():
+		_pending_messages = MESSAGES.duplicate()
+		_pending_messages.shuffle()
 	var rect: Rect2i = build_manager.unlocked_rect()
 	var label := Label3D.new()
-	label.text = MESSAGE
+	label.text = _pending_messages.pop_back()
 	label.font = preload("res://fonts/cozy_font.tres")
-	label.font_size = 72
-	label.pixel_size = 0.006
+	label.font_size = 48
+	label.pixel_size = 0.005
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.width = 800
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.modulate = Color(1.0, 0.97, 0.88)
 	label.outline_modulate = Color(0.25, 0.17, 0.1)
-	label.outline_size = 14
+	label.outline_size = 10
 	label.rotation_degrees.x = -90.0
-	label.position = Vector3(rect.position.x + rect.size.x * 0.5, 0.05, rect.end.y + 1.2)
+	label.position = Vector3(rect.position.x + rect.size.x * 0.5, 0.05, rect.end.y + 1.6)
 	get_tree().current_scene.add_child(label)
 
 	label.modulate.a = 0.0

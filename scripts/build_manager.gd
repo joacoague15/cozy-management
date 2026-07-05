@@ -50,6 +50,9 @@ const MODEL_PATHS := {
 	"columna": "res://models/MOD_Columna_Decorativa01.fbx",
 	"banco1": "res://models/BancoT1.fbx",
 	"banco2": "res://models/BancoT2.fbx",
+	"nenufar": "res://models/Nenufar.fbx",
+	"totora": "res://models/Totora.fbx",
+	"barca": "res://models/Barca.fbx",
 }
 const TRASH_BODY_COLOR := Color(0.23, 0.35, 0.28)
 const TRASH_LID_COLOR := Color(0.16, 0.17, 0.18)
@@ -618,6 +621,26 @@ func _apply_model_materials(key: String, template: Node3D) -> void:
 			_override_meshes(template, [
 				["", _grain_material(Color(0.68, 0.64, 0.55), Color(0.8, 0.76, 0.66), 2.0)],
 			])
+		"nenufar":
+			# Flor de nenufar: centro amarillo, petalos rosa palido.
+			_override_meshes(template, [
+				["Centar", _grain_material(Color(0.9, 0.75, 0.3), Color(0.95, 0.85, 0.45), 8.0)],
+				["", _grain_material(Color(0.93, 0.78, 0.83), Color(0.98, 0.9, 0.92), 8.0)],
+			])
+		"totora":
+			# Junco: frutos marrones, hojas verde oscuro, tallos verde claro.
+			_override_meshes(template, [
+				["Fruit", _grain_material(Color(0.45, 0.3, 0.18), Color(0.55, 0.38, 0.24), 8.0)],
+				["Leave", _grain_material(Color(0.3, 0.5, 0.28), Color(0.38, 0.58, 0.34), 6.0)],
+				["", _grain_material(Color(0.42, 0.6, 0.35), Color(0.5, 0.68, 0.42), 6.0)],
+			])
+		"barca":
+			# Barca del Retiro: casco azul, remos de madera, asas oscuras.
+			_override_meshes(template, [
+				["Palas", _grain_material(Color(0.55, 0.4, 0.26), Color(0.65, 0.5, 0.34), 6.0)],
+				["Asas", _grain_material(Color(0.35, 0.26, 0.18), Color(0.42, 0.32, 0.22), 6.0)],
+				["", _grain_material(Color(0.35, 0.52, 0.65), Color(0.45, 0.62, 0.74), 5.0)],
+			])
 
 ## Aplica a cada MeshInstance3D el material de la primera regla cuyo nombre
 ## este contenido en el nombre de la malla.
@@ -752,20 +775,85 @@ func _make_house_visual(size: int) -> Node3D:
 func _make_palace_visual(size: int) -> Node3D:
 	var arco := _make_model_visual("arco", size * 0.9)
 	var estatua := _make_model_visual("statue", size * 0.22)
-	var leones := _make_model_visual("leones", size * 0.55)
+	var leones := _make_model_visual("leones", size * 0.45)
 	if arco == null and estatua == null and leones == null:
 		return null
 	var group := Node3D.new()
 	if arco != null:
-		arco.position.z = -size * 0.25
+		arco.position.z = -size * 0.33
 		group.add_child(arco)
 	if estatua != null:
-		estatua.position.z = 0.0
+		estatua.position.z = -size * 0.12
 		group.add_child(estatua)
 	if leones != null:
-		leones.position.z = size * 0.3
+		leones.position.z = 0.0
 		group.add_child(leones)
+	# Estanque al frente de las estatuas, del ancho del arco.
+	var pond := _make_pond(size * 0.9, size * 0.22)
+	pond.position.z = size * 0.375
+	group.add_child(pond)
 	return group
+
+## Estanque del palacio: losa de piedra con agua animada (shader propio) y
+## decoracion sorteada pero coherente: totoras en las esquinas, nenufares a lo
+## largo de los bordes largos y, dos de cada tres veces, una barca cruzando
+## por el medio.
+func _make_pond(width: float, depth: float) -> Node3D:
+	var pond := Node3D.new()
+
+	var rim := MeshInstance3D.new()
+	var rim_mesh := BoxMesh.new()
+	rim_mesh.size = Vector3(width, 0.1, depth)
+	rim_mesh.material = _grain_material(Color(0.66, 0.63, 0.56), Color(0.78, 0.75, 0.68), 2.5)
+	rim.mesh = rim_mesh
+	rim.position.y = 0.05
+	pond.add_child(rim)
+
+	var water := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(width - 0.16, depth - 0.16)
+	var water_material := ShaderMaterial.new()
+	water_material.shader = preload("res://shaders/water.gdshader")
+	plane.material = water_material
+	water.mesh = plane
+	water.position.y = 0.085  # Apenas hundida respecto del borde de piedra.
+	pond.add_child(water)
+
+	# Totoras en 2 o 3 esquinas sorteadas.
+	var corners := [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]
+	corners.shuffle()
+	for i in randi_range(2, 3):
+		var corner: Vector2 = corners[i]
+		var totora := _make_model_visual("totora", 0.5)
+		if totora == null:
+			continue
+		totora.position = Vector3(
+			corner.x * (width * 0.5 - 0.35), 0.09, corner.y * (depth * 0.5 - 0.28)
+		)
+		totora.rotation.y = randf() * TAU
+		pond.add_child(totora)
+
+	# Nenufares repartidos sobre los bordes largos (dejan libre el centro).
+	for i in randi_range(3, 5):
+		var nenufar := _make_model_visual("nenufar", 0.28)
+		if nenufar == null:
+			continue
+		var edge := -1.0 if i % 2 == 0 else 1.0
+		nenufar.position = Vector3(
+			randf_range(-width * 0.5 + 0.5, width * 0.5 - 0.5),
+			0.09,
+			edge * randf_range(depth * 0.12, depth * 0.34)
+		)
+		nenufar.rotation.y = randf() * TAU
+		pond.add_child(nenufar)
+
+	if randf() < 0.66:
+		var barca := _make_model_visual("barca", 0.85)
+		if barca != null:
+			barca.position = Vector3(randf_range(-width * 0.2, width * 0.2), 0.09, 0.0)
+			barca.rotation.y = randf_range(-0.35, 0.35) + (PI if randf() < 0.5 else 0.0)
+			pond.add_child(barca)
+	return pond
 
 ## Parque de naturaleza: base verde plana que cubre las tiles, con una maceta
 ## (elegida al azar entre las dos) encima.
