@@ -85,11 +85,18 @@ var _hover_marker: MeshInstance3D
 var _hover_marker_material: StandardMaterial3D
 var _templates: Dictionary = {}  # clave de MODEL_PATHS -> Node3D o null
 var _unlock_stage := 0
+var _game_started := false
 
 func _ready() -> void:
 	_create_ghost()
 	_load_models()
-	terrain.set_unlocked_rect(unlocked_rect(), false)
+	# Las tiles quedan ocultas hasta que el menu llame a start_game().
+
+## Arranca la partida desde el menu: la zona inicial emerge animada y se
+## habilita el input de construccion.
+func start_game() -> void:
+	_game_started = true
+	terrain.set_unlocked_rect(unlocked_rect(), true)
 
 func _exit_tree() -> void:
 	for template in _templates.values():
@@ -102,6 +109,8 @@ func _process(delta: float) -> void:
 	_update_hover_marker(delta)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not _game_started:
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_1:
@@ -286,7 +295,7 @@ func _update_clean_preview() -> void:
 ## un quad crema translucido que sigue al cursor con un lerp corto (se desliza
 ## de tile en tile) y respira suave.
 func _update_hover_marker(delta: float) -> void:
-	if _selected_type != "":
+	if not _game_started or _selected_type != "":
 		_hover_marker.visible = false
 		return
 	var ground: Variant = mouse_to_ground()
@@ -712,21 +721,21 @@ func _make_cartel_visual() -> Node3D:
 	group.add_child(label)
 	return group
 
-## Visual de una casa: 70% la casa procedural de HouseGenerator; el resto son
-## props urbanos que varian la manzana (10% puesto, 10% columna decorativa,
-## 5% banco T1 y 5% banco T2). Mecanicamente siguen siendo casas: generan
+## Visual de una casa: 60% la casa procedural de HouseGenerator; el resto son
+## props urbanos que varian la manzana (15% puesto, 10% columna decorativa,
+## 7.5% banco T1 y 7.5% banco T2). Mecanicamente siguen siendo casas: generan
 ## turistas y cuentan para basura y naturaleza. El nodo devuelto lleva
 ## "wall_height" (alto de la colision), igual que las casas procedurales.
 func _make_house_visual(size: int) -> Node3D:
 	var roll := randf()
 	var key := ""
-	if roll < 0.10:
+	if roll < 0.15:
 		key = "puesto"
-	elif roll < 0.20:
-		key = "columna"
 	elif roll < 0.25:
+		key = "columna"
+	elif roll < 0.325:
 		key = "banco1"
-	elif roll < 0.30:
+	elif roll < 0.40:
 		key = "banco2"
 	if key != "":
 		var prop := _make_model_visual(key, size - building_margin * 2.0)

@@ -86,8 +86,10 @@ func _update_bench(delta: float) -> void:
 	var tourist := _random_free_tourist()
 	if tourist == null:
 		return
-	# Se sienta en el centro del banco, con el cuerpo apoyado en su tope.
-	tourist.assign_task(bench.position, randf_range(8.0, 14.0), bench.get_meta("height"))
+	# Se sienta en el centro del banco, apoyado a la altura del asiento (el
+	# "height" del edificio incluye el respaldo: el asiento queda a ~45%).
+	var seat_y: float = bench.get_meta("height") * 0.45
+	tourist.assign_task(bench.position, randf_range(8.0, 14.0), seat_y)
 	_sitter = tourist
 
 # --- Puesto de comida: cada tanto se arma una fila de 3 a 6 -----------------

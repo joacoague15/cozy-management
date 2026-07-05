@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://j5bm1k3fu43g" path="res://scripts/build_toolbar.gd" id="10_toolbar"]
 [ext_resource type="Script" uid="uid://ik6dftq8vskh" path="res://scripts/cozy_cursor.gd" id="11_cursor"]
 [ext_resource type="Script" path="res://scripts/question_button.gd" id="12_question"]
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="13_menu"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 sky_top_color = Color(0.38, 0.55, 0.83, 1)
@@ -96,3 +97,9 @@ tourist_manager = NodePath("../TouristManager")
 [node name="QuestionButton" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager")]
 script = ExtResource("12_question")
 build_manager = NodePath("../BuildManager")
+
+[node name="MainMenu" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager", "toolbar", "question_button")]
+script = ExtResource("13_menu")
+build_manager = NodePath("../BuildManager")
+toolbar = NodePath("../BuildToolbar")
+question_button = NodePath("../QuestionButton")

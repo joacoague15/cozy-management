@@ -72,10 +72,11 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `shaders/grid.gdshader` | Grilla y basura (`dirt_mask`) en la cara superior de las tiles; costados color tierra |
 | `scripts/terrain_tiles.gd` | Terreno por tiles (MultiMesh): esconde las celdas bloqueadas y anima la emergida al desbloquear |
 | `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, estatua FBX, HUD |
-| `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta). El 70% de las casas la usa; el resto sale como prop FBX (10% puesto, 10% columna, 5% banco T1, 5% banco T2) con la misma mecánica |
+| `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta). El 60% de las casas la usa; el resto sale como prop FBX (15% puesto, 10% columna, 7.5% banco T1, 7.5% banco T2) con la misma mecánica |
+| `scripts/main_menu.gd` | Menú inicial: "Madrid" arranca la partida (tiles emergen animadas + aparece la UI); "Buenos Aires" coming soon |
 | `scripts/tourist_manager.gd` | Spawn por casa (1/s), gates de suciedad/naturaleza, "+1" flotante, `total_spawned` |
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
 | `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza y botón de monumento con progreso |
 | `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo) y música de fondo en loop |
-| `scripts/question_button.gd` | Botón "?" abajo a la izquierda: aparece al azar, al presionarlo muestra un texto 3D al costado de la zona jugable por 10 seg |
+| `scripts/question_button.gd` | Botón "?" abajo a la derecha: aparece al azar, al presionarlo muestra un texto apoyado en el suelo al costado de la zona jugable por 10 seg |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |
