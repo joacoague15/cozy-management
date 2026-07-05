@@ -40,7 +40,7 @@ Tres construcciones únicas que se desbloquean con **turistas totales acumulados
 |---|---|---|---|---|
 | 6 | Cartel "Parque de el Retiro coming soon..." (`CartelT1.fbx`) | 1x1 | `historic_tourists_1` — **construirlo abre la zona 9x9** | 25 |
 | 7 | Catedral | 3x3 | `historic_tourists_1 + historic_tourists_2` — **construirla abre la zona 20x20** | 25 + 50 = 75 |
-| 8 | Palacio (arco + estatua + leones, con un estanque al frente: agua animada, totoras, nenúfares y a veces una barca) | 5x5 | suma de las tres | 25 + 50 + 75 = 150 |
+| 8 | Palacio (arco + estatua + leones, con un estanque al frente: agua azul, totoras, nenúfares y a veces una barca) | 5x5 | suma de las tres | 25 + 50 + 75 = 150 |
 
 - Cada histórica se puede construir **una sola vez** (si se borra, se puede volver a construir).
 - El cartel usa `models/CartelT1.fbx` con un **texto flotante** ("Parque de el Retiro coming soon...") sobre el modelo. La estatua de Alfonso XIII (`Estatua_AlfonsoXIII.fbx`) ahora aparece solo dentro de la composición del palacio.
@@ -74,6 +74,7 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, estatua FBX, HUD |
 | `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta). El 60% de las casas la usa; el resto sale como prop FBX (15% puesto, 10% columna, 7.5% banco T1, 7.5% banco T2) con la misma mecánica |
 | `scripts/main_menu.gd` | Menú inicial: "Madrid" arranca la partida (tiles emergen animadas + aparece la UI); "Buenos Aires" coming soon |
+| `scripts/loading_screen.gd` | Pantalla de carga: tapa todo mientras los FBX cargan en hilos de fondo y se desvanece hacia el menú |
 | `scripts/tourist_manager.gd` | Spawn por casa (1/s), gates de suciedad/naturaleza, "+1" flotante, `total_spawned` |
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
 | `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza y botón de monumento con progreso |

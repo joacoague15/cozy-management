@@ -10,6 +10,9 @@ extends Node3D
 ## La barra de botones (build_toolbar.gd) selecciona via select_building().
 
 signal buildings_changed
+## Se emite cuando terminaron de cargar todos los modelos FBX (en hilos de
+## fondo): recien ahi la pantalla de carga deja pasar al menu.
+signal models_loaded
 
 const GRID_SIZE := 20
 
@@ -87,6 +90,8 @@ var _area_ghost_material: StandardMaterial3D
 var _hover_marker: MeshInstance3D
 var _hover_marker_material: StandardMaterial3D
 var _templates: Dictionary = {}  # clave de MODEL_PATHS -> Node3D o null
+var _pending_loads: Array[String] = []  # claves con carga threaded en curso
+var models_ready := false
 var _unlock_stage := 0
 var _game_started := false
 
@@ -107,6 +112,7 @@ func _exit_tree() -> void:
 			template.free()
 
 func _process(delta: float) -> void:
+	_poll_model_loads()
 	_update_unlocks()
 	_update_ghost()
 	_update_hover_marker(delta)
@@ -559,26 +565,58 @@ func _advance_unlock() -> void:
 
 ## Carga cada modelo de MODEL_PATHS una sola vez; cada colocacion lo duplica.
 ## Si el asset no esta importado por el editor, se parsea el FBX en runtime.
+## Arranca la carga de todos los modelos en hilos de fondo: no bloquea el
+## primer frame (la pantalla de carga anima mientras tanto). Los archivos no
+## importados por el editor caen al parser FBX de runtime, sincrono (solo
+## pasa en desarrollo, con assets recien agregados).
 func _load_models() -> void:
 	for key in MODEL_PATHS:
 		var path: String = MODEL_PATHS[key]
-		var template: Node3D = null
 		if ResourceLoader.exists(path):
-			var scene: PackedScene = load(path)
-			if scene != null:
-				template = scene.instantiate()
-		if template == null:
-			var doc := FBXDocument.new()
-			var state := FBXState.new()
-			if doc.append_from_file(path, state) == OK:
-				template = doc.generate_scene(state)
-		if template == null:
-			push_warning("No se pudo cargar %s: se usara la caja de color." % path)
+			ResourceLoader.load_threaded_request(path)
+			_pending_loads.append(key)
 		else:
-			ModelEditor._strip_non_visual_nodes(template)
-			ModelEditor._enable_vertex_colors(template)
-			_apply_model_materials(key, template)
-		_templates[key] = template
+			_finish_template(key, null)
+	if _pending_loads.is_empty():
+		models_ready = true
+		models_loaded.emit()
+
+## Sondea las cargas threaded; cuando terminan todas, avisa con models_loaded
+## (lo escucha la pantalla de carga).
+func _poll_model_loads() -> void:
+	if models_ready:
+		return
+	for i in range(_pending_loads.size() - 1, -1, -1):
+		var key: String = _pending_loads[i]
+		var path: String = MODEL_PATHS[key]
+		match ResourceLoader.load_threaded_get_status(path):
+			ResourceLoader.THREAD_LOAD_LOADED:
+				var scene: PackedScene = ResourceLoader.load_threaded_get(path)
+				_finish_template(key, scene.instantiate() if scene != null else null)
+				_pending_loads.remove_at(i)
+			ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				_finish_template(key, null)
+				_pending_loads.remove_at(i)
+	if _pending_loads.is_empty():
+		models_ready = true
+		models_loaded.emit()
+
+## Deja listo el template de `key`: fallback a parseo FBX en runtime si hace
+## falta, limpieza de nodos no visuales y materiales procedurales.
+func _finish_template(key: String, template: Node3D) -> void:
+	var path: String = MODEL_PATHS[key]
+	if template == null:
+		var doc := FBXDocument.new()
+		var state := FBXState.new()
+		if doc.append_from_file(path, state) == OK:
+			template = doc.generate_scene(state)
+	if template == null:
+		push_warning("No se pudo cargar %s: se usara la caja de color." % path)
+	else:
+		ModelEditor._strip_non_visual_nodes(template)
+		ModelEditor._enable_vertex_colors(template)
+		_apply_model_materials(key, template)
+	_templates[key] = template
 
 ## Materiales procedurales para los modelos que llegan sin texturas (blancos
 ## o grises). Grano de ruido con proyeccion triplanar en espacio mundo: no
@@ -783,14 +821,14 @@ func _make_palace_visual(size: int) -> Node3D:
 		arco.position.z = -size * 0.33
 		group.add_child(arco)
 	if estatua != null:
-		estatua.position.z = -size * 0.12
+		estatua.position.z = -size * 0.14
 		group.add_child(estatua)
 	if leones != null:
-		leones.position.z = 0.0
+		leones.position.z = -size * 0.04
 		group.add_child(leones)
 	# Estanque al frente de las estatuas, del ancho del arco.
-	var pond := _make_pond(size * 0.9, size * 0.22)
-	pond.position.z = size * 0.375
+	var pond := _make_pond(size * 0.9, size * 0.31)
+	pond.position.z = size * 0.335
 	group.add_child(pond)
 	return group
 
@@ -809,14 +847,20 @@ func _make_pond(width: float, depth: float) -> Node3D:
 	rim.position.y = 0.05
 	pond.add_child(rim)
 
+	# Agua: plano azul con el mismo grano de ruido de los demas materiales
+	# (dos tonos de azul bien legibles como agua) y algo de brillo.
 	var water := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(width - 0.16, depth - 0.16)
-	var water_material := ShaderMaterial.new()
-	water_material.shader = preload("res://shaders/water.gdshader")
+	var water_material := _grain_material(
+		Color(0.16, 0.38, 0.52), Color(0.35, 0.58, 0.7), 1.6
+	)
+	water_material.roughness = 0.2
 	plane.material = water_material
 	water.mesh = plane
-	water.position.y = 0.085  # Apenas hundida respecto del borde de piedra.
+	# Apoyada sobre la cara superior de la losa (tope en 0.1), apenas
+	# elevada para no z-fightear con la piedra.
+	water.position.y = 0.105
 	pond.add_child(water)
 
 	# Totoras en 2 o 3 esquinas sorteadas.
@@ -828,7 +872,7 @@ func _make_pond(width: float, depth: float) -> Node3D:
 		if totora == null:
 			continue
 		totora.position = Vector3(
-			corner.x * (width * 0.5 - 0.35), 0.09, corner.y * (depth * 0.5 - 0.28)
+			corner.x * (width * 0.5 - 0.35), 0.11, corner.y * (depth * 0.5 - 0.28)
 		)
 		totora.rotation.y = randf() * TAU
 		pond.add_child(totora)
@@ -841,7 +885,7 @@ func _make_pond(width: float, depth: float) -> Node3D:
 		var edge := -1.0 if i % 2 == 0 else 1.0
 		nenufar.position = Vector3(
 			randf_range(-width * 0.5 + 0.5, width * 0.5 - 0.5),
-			0.09,
+			0.11,
 			edge * randf_range(depth * 0.12, depth * 0.34)
 		)
 		nenufar.rotation.y = randf() * TAU
@@ -850,7 +894,7 @@ func _make_pond(width: float, depth: float) -> Node3D:
 	if randf() < 0.66:
 		var barca := _make_model_visual("barca", 0.85)
 		if barca != null:
-			barca.position = Vector3(randf_range(-width * 0.2, width * 0.2), 0.09, 0.0)
+			barca.position = Vector3(randf_range(-width * 0.2, width * 0.2), 0.11, 0.0)
 			barca.rotation.y = randf_range(-0.35, 0.35) + (PI if randf() < 0.5 else 0.0)
 			pond.add_child(barca)
 	return pond

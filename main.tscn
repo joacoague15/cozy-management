@@ -12,6 +12,7 @@
 [ext_resource type="Script" uid="uid://ik6dftq8vskh" path="res://scripts/cozy_cursor.gd" id="11_cursor"]
 [ext_resource type="Script" path="res://scripts/question_button.gd" id="12_question"]
 [ext_resource type="Script" path="res://scripts/main_menu.gd" id="13_menu"]
+[ext_resource type="Script" path="res://scripts/loading_screen.gd" id="14_loading"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 sky_top_color = Color(0.38, 0.55, 0.83, 1)
@@ -25,7 +26,19 @@ sky_material = SubResource("sky_material")
 [sub_resource type="Environment" id="environment"]
 background_mode = 2
 sky = SubResource("sky")
-tonemap_mode = 2
+tonemap_mode = 3
+tonemap_exposure = 1.1
+tonemap_white = 6.0
+glow_enabled = true
+glow_intensity = 0.45
+glow_strength = 0.9
+glow_bloom = 0.04
+glow_blend_mode = 2
+glow_hdr_threshold = 1.1
+adjustment_enabled = true
+adjustment_brightness = 1.02
+adjustment_contrast = 1.05
+adjustment_saturation = 1.12
 
 [sub_resource type="ShaderMaterial" id="terrain_material"]
 render_priority = 0
@@ -103,3 +116,7 @@ script = ExtResource("13_menu")
 build_manager = NodePath("../BuildManager")
 toolbar = NodePath("../BuildToolbar")
 question_button = NodePath("../QuestionButton")
+
+[node name="LoadingScreen" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager")]
+script = ExtResource("14_loading")
+build_manager = NodePath("../BuildManager")
