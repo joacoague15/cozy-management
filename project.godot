@@ -22,6 +22,7 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 
 TouristConfig="*res://scripts/tourist_config.gd"
 GameConfig="*res://scripts/game_config.gd"
+Sfx="*res://scripts/sfx.gd"
 
 [display]
 

@@ -158,6 +158,7 @@ func _update_monument_state(delta: float, pulse: float) -> void:
 
 ## Pop de escala al pasar de bloqueado a listo: "ya lo podes construir".
 func _pop_monument() -> void:
+	Sfx.play("ready")
 	_monument_button.pivot_offset = _monument_button.size / 2.0
 	var tween := _monument_button.create_tween()
 	tween.tween_property(_monument_button, "scale", Vector2.ONE * 1.15, 0.18) \

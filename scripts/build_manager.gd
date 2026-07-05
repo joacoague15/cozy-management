@@ -5,7 +5,7 @@ extends Node3D
 ## se previsualiza el area NxN que va a purificar). 5: naturaleza (se exigen
 ## GameConfig.nature_amount por cada nature_per_houses casas). 6/7/8:
 ## construcciones historicas (se desbloquean con turistas totales, una de cada
-## una; la 6 es la estatua de Alfonso XIII, ocupa 1x1 y construirla amplia la
+## una; la 6 es el cartel del Retiro, ocupa 1x1 y construirlo amplia la
 ## zona construible). Click izquierdo coloca, click derecho cancela o borra.
 ## La barra de botones (build_toolbar.gd) selecciona via select_building().
 
@@ -28,12 +28,12 @@ const HISTORIC_COLORS := {
 	3: Color(0.92, 0.88, 0.78),
 }
 const HISTORIC_HEIGHTS := {
-	1: 3.2,
+	1: 1.8,
 	2: 3.8,
 	3: 4.5,
 }
 const HISTORIC_NAMES := {
-	1: "Estatua",
+	1: "Cartel",
 	2: "Catedral",
 	3: "Palacio",
 }
@@ -45,6 +45,11 @@ const MODEL_PATHS := {
 	"leones": "res://models/Leones_y_plataforma.fbx",
 	"maceta1": "res://models/MOD_Maceta01.fbx",
 	"maceta2": "res://models/MOD_Maceta02.fbx",
+	"cartel": "res://models/CartelT1.fbx",
+	"puesto": "res://models/Puesto.fbx",
+	"columna": "res://models/MOD_Columna_Decorativa01.fbx",
+	"banco1": "res://models/BancoT1.fbx",
+	"banco2": "res://models/BancoT2.fbx",
 }
 const TRASH_BODY_COLOR := Color(0.23, 0.35, 0.28)
 const TRASH_LID_COLOR := Color(0.16, 0.17, 0.18)
@@ -79,8 +84,6 @@ var _area_ghost_material: StandardMaterial3D
 var _hover_marker: MeshInstance3D
 var _hover_marker_material: StandardMaterial3D
 var _templates: Dictionary = {}  # clave de MODEL_PATHS -> Node3D o null
-var _last_statue_size := -1.0
-var _last_statue_offset := 0.0
 var _unlock_stage := 0
 
 func _ready() -> void:
@@ -97,7 +100,6 @@ func _process(delta: float) -> void:
 	_update_unlocks()
 	_update_ghost()
 	_update_hover_marker(delta)
-	_update_placed_statues()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -133,6 +135,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 func _select(type: String, variant: int) -> void:
+	if type != "":
+		Sfx.play("select", 0.04)
+	elif _selected_type != "":
+		Sfx.play("deselect", 0.04)
 	_selected_type = type
 	_selected_variant = variant
 	_ghost.visible = type != ""
@@ -332,7 +338,7 @@ func _place_building(cell: Vector2i) -> void:
 	var side := float(size) if _selected_type == TYPE_NATURE else size - building_margin * 2.0
 
 	if _selected_type == TYPE_HOUSE:
-		var house := HouseGenerator.build(_selected_variant, size, building_margin)
+		var house := _make_house_visual(size)
 		building.add_child(house)
 		# La colision cubre solo el cuerpo (el techo sobresale sin colision).
 		height = house.get_meta("wall_height")
@@ -381,6 +387,7 @@ func _place_building(cell: Vector2i) -> void:
 	building.set_meta("type", _selected_type)
 	building.set_meta("variant", _selected_variant)
 	_animate_construction(building)
+	Sfx.play("build", 0.07)
 	buildings_changed.emit()
 
 # --- Feedback de construccion --------------------------------------------------
@@ -439,6 +446,7 @@ func _delete_building_under_mouse() -> void:
 	for c in building.get_meta("cells"):
 		_occupancy.erase(c)
 	building.queue_free()
+	Sfx.play("delete", 0.05)
 	buildings_changed.emit()
 
 func get_buildings() -> Array[Node]:
@@ -554,7 +562,98 @@ func _load_models() -> void:
 		else:
 			ModelEditor._strip_non_visual_nodes(template)
 			ModelEditor._enable_vertex_colors(template)
+			_apply_model_materials(key, template)
 		_templates[key] = template
+
+## Materiales procedurales para los modelos que llegan sin texturas (blancos
+## o grises). Grano de ruido con proyeccion triplanar en espacio mundo: no
+## depende de las UVs del FBX y funciona en cualquier malla. Las reglas se
+## evaluan en orden y matchean por subcadena del nombre de la malla
+## ("" = el resto).
+func _apply_model_materials(key: String, template: Node3D) -> void:
+	match key:
+		"cartel":
+			# Tabla en nogal medio-oscuro: el texto crema con contorno oscuro
+			# contrasta bien encima. Postes y marco mas oscuros.
+			_override_meshes(template, [
+				["Soporte", _grain_material(Color(0.36, 0.25, 0.15), Color(0.45, 0.33, 0.21), 3.0)],
+				["", _grain_material(Color(0.23, 0.155, 0.095), Color(0.29, 0.2, 0.125), 3.0)],
+			])
+		"puesto":
+			var wood := _grain_material(Color(0.45, 0.31, 0.19), Color(0.55, 0.4, 0.26), 4.0)
+			_override_meshes(template, [
+				["Carpa", _stripes_material(Color(0.78, 0.25, 0.2), Color(0.93, 0.88, 0.78), 3.3)],
+				["Caja", _grain_material(Color(0.58, 0.44, 0.28), Color(0.68, 0.53, 0.36), 5.0)],
+				["Patitas", wood],  # antes que "Cartel": PatitasCartel es madera
+				["Cartel", _grain_material(Color(0.9, 0.85, 0.72), Color(0.96, 0.92, 0.82), 4.0)],
+				["", wood],
+			])
+		"columna":
+			_override_meshes(template, [
+				["", _grain_material(Color(0.62, 0.6, 0.55), Color(0.75, 0.73, 0.67), 2.5)],
+			])
+		"banco1", "banco2":
+			# Banco de plaza clasico: hierro forjado verde oscuro en patas y
+			# soportes, tablas de madera calida en asiento y respaldo.
+			var iron := _grain_material(Color(0.13, 0.2, 0.14), Color(0.17, 0.25, 0.18), 6.0)
+			_override_meshes(template, [
+				["Patas", iron],
+				["Soportes", iron],
+				["", _grain_material(Color(0.5, 0.35, 0.21), Color(0.6, 0.44, 0.28), 5.0)],
+			])
+		"mausoleo":
+			# Piedra caliza envejecida, un poco mas calida que la columna.
+			_override_meshes(template, [
+				["", _grain_material(Color(0.68, 0.64, 0.55), Color(0.8, 0.76, 0.66), 2.0)],
+			])
+
+## Aplica a cada MeshInstance3D el material de la primera regla cuyo nombre
+## este contenido en el nombre de la malla.
+func _override_meshes(node: Node, rules: Array) -> void:
+	if node is MeshInstance3D:
+		for rule in rules:
+			if rule[0] == "" or String(node.name).contains(rule[0]):
+				node.material_override = rule[1]
+				break
+	for child in node.get_children():
+		_override_meshes(child, rules)
+
+## Material con grano sutil: ruido seamless mapeado a un degrade entre dos
+## tonos cercanos. grain_scale controla el tamano del grano en mundo.
+func _grain_material(dark: Color, light: Color, grain_scale: float) -> StandardMaterial3D:
+	var noise := FastNoiseLite.new()
+	noise.frequency = 0.008
+	var texture := NoiseTexture2D.new()
+	texture.noise = noise
+	texture.seamless = true
+	var ramp := Gradient.new()
+	ramp.set_color(0, dark)
+	ramp.set_color(1, light)
+	texture.color_ramp = ramp
+	return _triplanar_material(texture, grain_scale)
+
+## Franjas verticales duras entre dos colores (toldo del puesto). El ancho de
+## cada franja en mundo es 1 / (2 * stripe_scale).
+func _stripes_material(a: Color, b: Color, stripe_scale: float) -> StandardMaterial3D:
+	var ramp := Gradient.new()
+	ramp.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
+	ramp.set_color(0, a)
+	ramp.add_point(0.5, b)
+	ramp.set_color(ramp.get_point_count() - 1, b)
+	var texture := GradientTexture2D.new()
+	texture.gradient = ramp
+	texture.fill_from = Vector2(0.0, 0.0)
+	texture.fill_to = Vector2(1.0, 0.0)
+	return _triplanar_material(texture, stripe_scale)
+
+func _triplanar_material(texture: Texture2D, uv_scale: float) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_texture = texture
+	material.uv1_triplanar = true
+	material.uv1_world_triplanar = true
+	material.uv1_scale = Vector3.ONE * uv_scale
+	material.roughness = 1.0
+	return material
 
 ## Contenedor con el modelo apoyado en y=0 y centrado en su AABB, escalado
 ## para que su lado mayor en XZ mida `tiles` tiles. Guarda "fit_scale" (escala
@@ -579,12 +678,59 @@ func _make_model_visual(key: String, tiles: float) -> Node3D:
 func _make_historic_visual(variant: int, size: int) -> Node3D:
 	match variant:
 		1:
-			return _make_statue_visual()
+			return _make_cartel_visual()
 		2:
 			return _make_model_visual("mausoleo", size * 0.95)
 		3:
 			return _make_palace_visual(size)
 	return null
+
+## Cartel del Retiro (historica 1): el modelo del cartel con el anuncio del
+## parque escrito sobre la tabla. El tablero del modelo es delgado en Z (el
+## frente mira a +Z, hacia la camara) y su centro queda a ~62% de la altura
+## total, asi que el texto se apoya ahi, apenas despegado para no z-fightear.
+func _make_cartel_visual() -> Node3D:
+	var cartel := _make_model_visual("cartel", 0.95)
+	if cartel == null:
+		return null
+	var group := Node3D.new()
+	group.add_child(cartel)
+	var aabb := ModelEditor._combined_aabb(cartel, Transform3D.IDENTITY)
+	var label := Label3D.new()
+	label.text = "Parque de\nEl Retiro\ncoming soon..."
+	label.font_size = 56
+	label.pixel_size = 0.0016
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.modulate = Color(1.0, 0.96, 0.85)
+	label.outline_modulate = Color(0.2, 0.13, 0.08)
+	label.outline_size = 10
+	label.position = Vector3(0.0, aabb.end.y * 0.62, aabb.end.z + 0.012)
+	group.add_child(label)
+	return group
+
+## Visual de una casa: 70% la casa procedural de HouseGenerator; el resto son
+## props urbanos que varian la manzana (10% puesto, 10% columna decorativa,
+## 5% banco T1 y 5% banco T2). Mecanicamente siguen siendo casas: generan
+## turistas y cuentan para basura y naturaleza. El nodo devuelto lleva
+## "wall_height" (alto de la colision), igual que las casas procedurales.
+func _make_house_visual(size: int) -> Node3D:
+	var roll := randf()
+	var key := ""
+	if roll < 0.10:
+		key = "puesto"
+	elif roll < 0.20:
+		key = "columna"
+	elif roll < 0.25:
+		key = "banco1"
+	elif roll < 0.30:
+		key = "banco2"
+	if key != "":
+		var prop := _make_model_visual(key, size - building_margin * 2.0)
+		if prop != null:
+			var aabb := ModelEditor._combined_aabb(prop, Transform3D.IDENTITY)
+			prop.set_meta("wall_height", maxf(aabb.end.y, 0.4))
+			return prop
+	return HouseGenerator.build(_selected_variant, size, building_margin)
 
 ## Palacio (historica 3): composicion dentro del footprint NxN, de atras hacia
 ## adelante: el arco, la estatua de Alfonso XIII y los leones con su
@@ -648,33 +794,6 @@ func _make_cylinder(top: float, bottom: float, height: float, color: Color, y: f
 	mesh_instance.mesh = mesh
 	mesh_instance.position.y = y
 	return mesh_instance
-
-# --- Estatua de Alfonso XIII (historica 1) -----------------------------------
-
-## Contenedor con el pivote en el centro de la base de la estatua, escalado
-## al footprint configurado (GameConfig.statue_size, ajustable en vivo).
-func _make_statue_visual() -> Node3D:
-	var container := _make_model_visual("statue", 1.0)
-	if container == null:
-		return null
-	container.add_to_group("statue_visual")
-	_apply_statue_config(container)
-	return container
-
-func _apply_statue_config(container: Node3D) -> void:
-	container.scale = Vector3.ONE * container.get_meta("fit_scale") * GameConfig.statue_size
-	container.position.y = GameConfig.statue_offset_y
-
-## Aplica en vivo los cambios de escala/altura de GameConfig a las estatuas ya
-## colocadas.
-func _update_placed_statues() -> void:
-	if GameConfig.statue_size == _last_statue_size \
-			and GameConfig.statue_offset_y == _last_statue_offset:
-		return
-	_last_statue_size = GameConfig.statue_size
-	_last_statue_offset = GameConfig.statue_offset_y
-	for container in get_tree().get_nodes_in_group("statue_visual"):
-		_apply_statue_config(container)
 
 # ---------------------------------------------------------------------------
 

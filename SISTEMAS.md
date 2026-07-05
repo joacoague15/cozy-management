@@ -27,23 +27,23 @@ El mapa de 20x20 arranca con solo el **3x3 central** habilitado. El terreno es u
 | Zona | Lado | Se desbloquea con |
 |---|---|---|
 | 1 | 3x3 | inicio |
-| 2 | 9x9 | **construir** la estatua (disponible con `historic_tourists_1` = 25 turistas) |
+| 2 | 9x9 | **construir** el cartel (disponible con `historic_tourists_1` = 25 turistas) |
 | 3 | 20x20 | **construir** la catedral (disponible con 25 + 50 = 75 turistas) |
 
 Al desbloquear, las tiles nuevas **emergen desde abajo del terreno**, en ondas anillo por anillo desde el borde de la zona anterior, con un leve rebote al asentarse.
 
 ## Construcciones históricas
 
-Tres construcciones únicas que se desbloquean con **turistas totales acumulados**. La estatua ocupa **1x1**, la catedral **3x3** y el palacio `historic_size` x `historic_size` (por defecto **5x5**, configurable):
+Tres construcciones únicas que se desbloquean con **turistas totales acumulados**. El cartel ocupa **1x1**, la catedral **3x3** y el palacio `historic_size` x `historic_size` (por defecto **5x5**, configurable):
 
 | Tecla | Nombre | Tamaño | Se desbloquea con (acumulado) | Default |
 |---|---|---|---|---|
-| 6 | Estatua (Alfonso XIII, modelo FBX) | 1x1 | `historic_tourists_1` — **construirla abre la zona 9x9** | 25 |
+| 6 | Cartel "Parque de el Retiro coming soon..." (`CartelT1.fbx`) | 1x1 | `historic_tourists_1` — **construirlo abre la zona 9x9** | 25 |
 | 7 | Catedral | 3x3 | `historic_tourists_1 + historic_tourists_2` — **construirla abre la zona 20x20** | 25 + 50 = 75 |
 | 8 | Palacio | 5x5 | suma de las tres | 25 + 50 + 75 = 150 |
 
 - Cada histórica se puede construir **una sola vez** (si se borra, se puede volver a construir).
-- La estatua usa `models/Estatua_AlfonsoXIII.fbx`; su escala (`statue_size`, en tiles) y altura de apoyo (`statue_offset_y`) se ajustan en vivo desde F1.
+- El cartel usa `models/CartelT1.fbx` con un **texto flotante** ("Parque de el Retiro coming soon...") sobre el modelo. La estatua de Alfonso XIII (`Estatua_AlfonsoXIII.fbx`) ahora aparece solo dentro de la composición del palacio.
 - El HUD muestra el estado de cada una: turistas requeridos, "lista!" o "construida".
 - El **botón de monumento** de la barra de construcción representa siempre la próxima histórica sin construir: mientras faltan turistas está **deshabilitado** y se llena de dorado según el progreso; al desbloquearse hace un "pop" y su borde pulsa dorado hasta construirla.
 
@@ -60,7 +60,6 @@ El panel F1 (compartido con los turistas) edita en vivo el autoload `GameConfig`
 | Naturaleza: tamaño del tile (NxN) | `nature_size` | 1 |
 | Palacio: tamaño (NxN) | `historic_size` | 5 |
 | Históricas: turistas 1ra / +2da / +3ra | `historic_tourists_1/2/3` | 25 / 50 / 75 |
-| Estatua: tamaño visual (tiles) / altura (m) | `statue_size` / `statue_offset_y` | 1.0 / 0 |
 
 Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta al fantasma y a las próximas colocaciones (las ya construidas no cambian).
 
@@ -73,8 +72,9 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `shaders/grid.gdshader` | Grilla y basura (`dirt_mask`) en la cara superior de las tiles; costados color tierra |
 | `scripts/terrain_tiles.gd` | Terreno por tiles (MultiMesh): esconde las celdas bloqueadas y anima la emergida al desbloquear |
 | `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, estatua FBX, HUD |
-| `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta) |
+| `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta). El 70% de las casas la usa; el resto sale como prop FBX (10% puesto, 10% columna, 5% banco T1, 5% banco T2) con la misma mecánica |
 | `scripts/tourist_manager.gd` | Spawn por casa (1/s), gates de suciedad/naturaleza, "+1" flotante, `total_spawned` |
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
 | `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza y botón de monumento con progreso |
+| `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo) |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |

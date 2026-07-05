@@ -1,15 +1,15 @@
-[gd_scene load_steps=15 format=3 uid="uid://b7n1ce8audqbm"]
+[gd_scene format=3 uid="uid://b7n1ce8audqbm"]
 
-[ext_resource type="Script" path="res://scripts/camera_controller.gd" id="1_cam"]
-[ext_resource type="Script" path="res://scripts/build_manager.gd" id="2_build"]
-[ext_resource type="Shader" path="res://shaders/grid.gdshader" id="3_grid"]
-[ext_resource type="Script" path="res://scripts/tourist_manager.gd" id="4_tourists"]
-[ext_resource type="Script" path="res://scripts/dirt_manager.gd" id="6_dirt"]
-[ext_resource type="Script" path="res://scripts/model_editor.gd" id="7_models"]
-[ext_resource type="Script" path="res://scripts/status_ui.gd" id="8_status"]
-[ext_resource type="Script" path="res://scripts/terrain_tiles.gd" id="9_terrain"]
-[ext_resource type="Script" path="res://scripts/build_toolbar.gd" id="10_toolbar"]
-[ext_resource type="Script" path="res://scripts/cozy_cursor.gd" id="11_cursor"]
+[ext_resource type="Script" uid="uid://dwm8ufwc3sqlb" path="res://scripts/camera_controller.gd" id="1_cam"]
+[ext_resource type="Script" uid="uid://gmjg0kahvdmh" path="res://scripts/build_manager.gd" id="2_build"]
+[ext_resource type="Shader" uid="uid://cxh7dtxophmv7" path="res://shaders/grid.gdshader" id="3_grid"]
+[ext_resource type="Script" uid="uid://cp8qab7xw722g" path="res://scripts/tourist_manager.gd" id="4_tourists"]
+[ext_resource type="Script" uid="uid://dsrgow8j0qjjb" path="res://scripts/dirt_manager.gd" id="6_dirt"]
+[ext_resource type="Script" uid="uid://8dthliudy008" path="res://scripts/model_editor.gd" id="7_models"]
+[ext_resource type="Script" uid="uid://bf174qwaig6dt" path="res://scripts/status_ui.gd" id="8_status"]
+[ext_resource type="Script" uid="uid://b2d7wh0yqx74y" path="res://scripts/terrain_tiles.gd" id="9_terrain"]
+[ext_resource type="Script" uid="uid://j5bm1k3fu43g" path="res://scripts/build_toolbar.gd" id="10_toolbar"]
+[ext_resource type="Script" uid="uid://ik6dftq8vskh" path="res://scripts/cozy_cursor.gd" id="11_cursor"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 sky_top_color = Color(0.38, 0.55, 0.83, 1)
@@ -33,60 +33,61 @@ shader_parameter/line_color = Color(0.32, 0.46, 0.25, 1)
 shader_parameter/line_width = 0.025
 shader_parameter/side_color = Color(0.37, 0.28, 0.2, 1)
 shader_parameter/dirt_color = Color(0.23, 0.2, 0.16, 1)
+shader_parameter/dirt_stain_color = Color(0.15, 0.13, 0.09, 1)
 shader_parameter/dirt_strength = 0.7
 shader_parameter/grid_extent = 20.0
 
-[node name="Main" type="Node3D"]
+[node name="Main" type="Node3D" unique_id=2004597662]
 script = ExtResource("11_cursor")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1464116983]
 environment = SubResource("environment")
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1633424019]
 transform = Transform3D(0.8192, 0.4699, -0.329, 0, 0.5736, 0.8192, 0.5736, -0.671, 0.4699, 0, 12, 0)
 shadow_enabled = true
 
-[node name="Terrain" type="MultiMeshInstance3D" parent="."]
+[node name="Terrain" type="MultiMeshInstance3D" parent="." unique_id=1707522100]
 material_override = SubResource("terrain_material")
 script = ExtResource("9_terrain")
 
-[node name="CameraRig" type="Node3D" parent="." node_paths=PackedStringArray("build_manager", "model_editor")]
+[node name="CameraRig" type="Node3D" parent="." unique_id=1848955474 node_paths=PackedStringArray("build_manager", "model_editor")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 10)
 script = ExtResource("1_cam")
 build_manager = NodePath("../BuildManager")
 model_editor = NodePath("../ModelEditor")
 
-[node name="Pitch" type="Node3D" parent="CameraRig"]
+[node name="Pitch" type="Node3D" parent="CameraRig" unique_id=116984231]
 
-[node name="Camera3D" type="Camera3D" parent="CameraRig/Pitch"]
+[node name="Camera3D" type="Camera3D" parent="CameraRig/Pitch" unique_id=1921145001]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 18)
 
-[node name="BuildManager" type="Node3D" parent="." node_paths=PackedStringArray("tourist_manager", "terrain")]
+[node name="BuildManager" type="Node3D" parent="." unique_id=2132975937 node_paths=PackedStringArray("tourist_manager", "terrain")]
 script = ExtResource("2_build")
 tourist_manager = NodePath("../TouristManager")
 terrain = NodePath("../Terrain")
 
-[node name="Buildings" type="Node3D" parent="BuildManager"]
+[node name="Buildings" type="Node3D" parent="BuildManager" unique_id=518838393]
 
-[node name="TouristManager" type="Node3D" parent="." node_paths=PackedStringArray("build_manager", "dirt_manager")]
+[node name="TouristManager" type="Node3D" parent="." unique_id=1398927601 node_paths=PackedStringArray("build_manager", "dirt_manager")]
 script = ExtResource("4_tourists")
 build_manager = NodePath("../BuildManager")
 dirt_manager = NodePath("../DirtManager")
 
-[node name="DirtManager" type="Node" parent="." node_paths=PackedStringArray("build_manager", "terrain")]
+[node name="DirtManager" type="Node" parent="." unique_id=1112048299 node_paths=PackedStringArray("build_manager", "terrain")]
 script = ExtResource("6_dirt")
 build_manager = NodePath("../BuildManager")
 terrain = NodePath("../Terrain")
 
-[node name="ModelEditor" type="Node3D" parent="." node_paths=PackedStringArray("build_manager")]
+[node name="ModelEditor" type="Node3D" parent="." unique_id=4119646 node_paths=PackedStringArray("build_manager")]
 script = ExtResource("7_models")
 build_manager = NodePath("../BuildManager")
 
-[node name="StatusUI" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager")]
+[node name="StatusUI" type="CanvasLayer" parent="." unique_id=631396115 node_paths=PackedStringArray("build_manager")]
 script = ExtResource("8_status")
 build_manager = NodePath("../BuildManager")
 
-[node name="BuildToolbar" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager", "tourist_manager")]
+[node name="BuildToolbar" type="CanvasLayer" parent="." unique_id=594149799 node_paths=PackedStringArray("build_manager", "tourist_manager")]
 script = ExtResource("10_toolbar")
 build_manager = NodePath("../BuildManager")
 tourist_manager = NodePath("../TouristManager")
