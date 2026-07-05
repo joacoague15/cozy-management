@@ -42,10 +42,8 @@ const HISTORIC_NAMES := {
 }
 ## Modelos FBX que reemplazan a las cajas de color cuando estan disponibles.
 const MODEL_PATHS := {
-	"statue": "res://models/Estatua_AlfonsoXIII.fbx",
 	"mausoleo": "res://models/MOD_Mausoleo.fbx",
-	"arco": "res://models/Arco_Estatua_Alonso_XIII.fbx",
-	"leones": "res://models/Leones_y_plataforma.fbx",
+	"parcela": "res://models/Parcela_Alfonso_XIII_Combined.fbx",
 	"maceta1": "res://models/MOD_Maceta01.fbx",
 	"maceta2": "res://models/MOD_Maceta02.fbx",
 	"cartel": "res://models/CartelT1.fbx",
@@ -54,7 +52,6 @@ const MODEL_PATHS := {
 	"banco1": "res://models/BancoT1.fbx",
 	"banco2": "res://models/BancoT2.fbx",
 	"nenufar": "res://models/Nenufar.fbx",
-	"totora": "res://models/Totora.fbx",
 	"barca": "res://models/Barca.fbx",
 }
 const TRASH_BODY_COLOR := Color(0.23, 0.35, 0.28)
@@ -415,7 +412,8 @@ func _place_building(cell: Vector2i) -> void:
 
 ## Al construir, las partes del edificio aparecen sobre su posicion final y
 ## van cayendo en secuencia (las mas bajas primero), asentandose con un rebote
-## suave. El palacio cae en tres tandas bien marcadas: arco, estatua y leones.
+## suave. El palacio cae en tandas bien marcadas: primero la parcela entera y
+## despues, una a una, las barcas y nenufares del estanque.
 func _animate_construction(building: Node3D) -> void:
 	var is_palace: bool = building.get_meta("type") == TYPE_HISTORIC \
 			and building.get_meta("variant") == 3
@@ -665,13 +663,6 @@ func _apply_model_materials(key: String, template: Node3D) -> void:
 				["Centar", _grain_material(Color(0.9, 0.75, 0.3), Color(0.95, 0.85, 0.45), 8.0)],
 				["", _grain_material(Color(0.93, 0.78, 0.83), Color(0.98, 0.9, 0.92), 8.0)],
 			])
-		"totora":
-			# Junco: frutos marrones, hojas verde oscuro, tallos verde claro.
-			_override_meshes(template, [
-				["Fruit", _grain_material(Color(0.45, 0.3, 0.18), Color(0.55, 0.38, 0.24), 8.0)],
-				["Leave", _grain_material(Color(0.3, 0.5, 0.28), Color(0.38, 0.58, 0.34), 6.0)],
-				["", _grain_material(Color(0.42, 0.6, 0.35), Color(0.5, 0.68, 0.42), 6.0)],
-			])
 		"barca":
 			# Barca del Retiro: casco azul, remos de madera, asas oscuras.
 			_override_meshes(template, [
@@ -807,97 +798,63 @@ func _make_house_visual(size: int) -> Node3D:
 			return prop
 	return HouseGenerator.build(_selected_variant, size, building_margin)
 
-## Palacio (historica 3): composicion dentro del footprint NxN, de atras hacia
-## adelante: el arco, la estatua de Alfonso XIII y los leones con su
-## plataforma. El frente mira a +Z (hacia la camara).
+## Palacio (historica 3): la parcela completa del monumento (arco, estatua,
+## leones y estanque en un solo FBX, Parcela_Alfonso_XIII_Combined). Sobre el
+## agua del estanque se sortean 1-2 barcas y 2-3 nenufares. El frente (el
+## estanque) mira a +Z, hacia la camara.
 func _make_palace_visual(size: int) -> Node3D:
-	var arco := _make_model_visual("arco", size * 0.9)
-	var estatua := _make_model_visual("statue", size * 0.22)
-	var leones := _make_model_visual("leones", size * 0.45)
-	if arco == null and estatua == null and leones == null:
+	var parcela := _make_model_visual("parcela", size * 0.95)
+	if parcela == null:
 		return null
 	var group := Node3D.new()
-	if arco != null:
-		arco.position.z = -size * 0.33
-		group.add_child(arco)
-	if estatua != null:
-		estatua.position.z = -size * 0.14
-		group.add_child(estatua)
-	if leones != null:
-		leones.position.z = -size * 0.04
-		group.add_child(leones)
-	# Estanque al frente de las estatuas, del ancho del arco.
-	var pond := _make_pond(size * 0.9, size * 0.31)
-	pond.position.z = size * 0.335
-	group.add_child(pond)
-	return group
+	group.add_child(parcela)
 
-## Estanque del palacio: losa de piedra con agua animada (shader propio) y
-## decoracion sorteada pero coherente: totoras en las esquinas, nenufares a lo
-## largo de los bordes largos y, dos de cada tres veces, una barca cruzando
-## por el medio.
-func _make_pond(width: float, depth: float) -> Node3D:
-	var pond := Node3D.new()
+	# Zona de agua medida sobre la malla del FBX (superficie "lambert2"),
+	# como fracciones del lado del footprint: centrada en X, ocupa la mitad
+	# frontal (+Z) y su superficie queda a ~4% del lado por encima de la base.
+	var side := size * 0.95
+	var water_y := side * 0.0413 + 0.01
+	var water_half_x := side * 0.472
+	var water_z_min := side * -0.050
+	var water_z_max := side * 0.489
 
-	var rim := MeshInstance3D.new()
-	var rim_mesh := BoxMesh.new()
-	rim_mesh.size = Vector3(width, 0.1, depth)
-	rim_mesh.material = _grain_material(Color(0.66, 0.63, 0.56), Color(0.78, 0.75, 0.68), 2.5)
-	rim.mesh = rim_mesh
-	rim.position.y = 0.05
-	pond.add_child(rim)
-
-	# Agua: plano azul con el mismo grano de ruido de los demas materiales
-	# (dos tonos de azul bien legibles como agua) y algo de brillo.
-	var water := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(width - 0.16, depth - 0.16)
-	var water_material := _grain_material(
-		Color(0.16, 0.38, 0.52), Color(0.35, 0.58, 0.7), 1.6
-	)
-	water_material.roughness = 0.2
-	plane.material = water_material
-	water.mesh = plane
-	# Apoyada sobre la cara superior de la losa (tope en 0.1), apenas
-	# elevada para no z-fightear con la piedra.
-	water.position.y = 0.105
-	pond.add_child(water)
-
-	# Totoras en 2 o 3 esquinas sorteadas.
-	var corners := [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]
-	corners.shuffle()
-	for i in randi_range(2, 3):
-		var corner: Vector2 = corners[i]
-		var totora := _make_model_visual("totora", 0.5)
-		if totora == null:
-			continue
-		totora.position = Vector3(
-			corner.x * (width * 0.5 - 0.35), 0.11, corner.y * (depth * 0.5 - 0.28)
+	# 1 o 2 barcas cruzando el estanque; si son dos, cada una toma una mitad
+	# del ancho para no chocarse.
+	var boat_count := randi_range(1, 2)
+	for i in boat_count:
+		var barca := _make_model_visual("barca", 0.85)
+		if barca == null:
+			break
+		var x_min := -water_half_x + 0.55
+		var x_max := water_half_x - 0.55
+		if boat_count == 2:
+			if i == 0:
+				x_max = -0.5
+			else:
+				x_min = 0.5
+		barca.position = Vector3(
+			randf_range(x_min, x_max),
+			water_y,
+			randf_range(water_z_min + 0.55, water_z_max - 0.55)
 		)
-		totora.rotation.y = randf() * TAU
-		pond.add_child(totora)
+		barca.rotation.y = randf_range(-0.35, 0.35) + (PI if randf() < 0.5 else 0.0)
+		group.add_child(barca)
 
-	# Nenufares repartidos sobre los bordes largos (dejan libre el centro).
-	for i in randi_range(3, 5):
+	# 2 o 3 nenufares cerca de los bordes delantero y trasero del agua
+	# (dejan libre la franja central, que es de las barcas).
+	for i in randi_range(2, 3):
 		var nenufar := _make_model_visual("nenufar", 0.28)
 		if nenufar == null:
-			continue
-		var edge := -1.0 if i % 2 == 0 else 1.0
+			break
+		var edge_z := water_z_max - 0.3 if i % 2 == 0 else water_z_min + 0.3
 		nenufar.position = Vector3(
-			randf_range(-width * 0.5 + 0.5, width * 0.5 - 0.5),
-			0.11,
-			edge * randf_range(depth * 0.12, depth * 0.34)
+			randf_range(-water_half_x + 0.3, water_half_x - 0.3),
+			water_y,
+			edge_z + randf_range(-0.15, 0.15)
 		)
 		nenufar.rotation.y = randf() * TAU
-		pond.add_child(nenufar)
-
-	if randf() < 0.66:
-		var barca := _make_model_visual("barca", 0.85)
-		if barca != null:
-			barca.position = Vector3(randf_range(-width * 0.2, width * 0.2), 0.11, 0.0)
-			barca.rotation.y = randf_range(-0.35, 0.35) + (PI if randf() < 0.5 else 0.0)
-			pond.add_child(barca)
-	return pond
+		group.add_child(nenufar)
+	return group
 
 ## Parque de naturaleza: base verde plana que cubre las tiles, con una maceta
 ## (elegida al azar entre las dos) encima.

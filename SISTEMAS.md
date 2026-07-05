@@ -40,10 +40,10 @@ Tres construcciones únicas que se desbloquean con **turistas totales acumulados
 |---|---|---|---|---|
 | 6 | Cartel "Parque de el Retiro coming soon..." (`CartelT1.fbx`) | 1x1 | `historic_tourists_1` — **construirlo abre la zona 9x9** | 25 |
 | 7 | Catedral | 3x3 | `historic_tourists_1 + historic_tourists_2` — **construirla abre la zona 20x20** | 25 + 50 = 75 |
-| 8 | Palacio (arco + estatua + leones, con un estanque al frente: agua azul, totoras, nenúfares y a veces una barca) | 5x5 | suma de las tres | 25 + 50 + 75 = 150 |
+| 8 | Palacio (`Parcela_Alfonso_XIII_Combined.fbx`: arco, estatua, leones y estanque en un solo modelo; sobre el agua se sortean 1-2 barcas y 2-3 nenúfares) | 5x5 | suma de las tres | 25 + 50 + 75 = 150 |
 
 - Cada histórica se puede construir **una sola vez** (si se borra, se puede volver a construir).
-- El cartel usa `models/CartelT1.fbx` con un **texto flotante** ("Parque de el Retiro coming soon...") sobre el modelo. La estatua de Alfonso XIII (`Estatua_AlfonsoXIII.fbx`) ahora aparece solo dentro de la composición del palacio.
+- El cartel usa `models/CartelT1.fbx` con un **texto flotante** ("Parque de el Retiro coming soon...") sobre el modelo. El palacio usa la parcela completa (`Parcela_Alfonso_XIII_Combined.fbx`); los FBX sueltos del arco, la estatua, los leones y las totoras ya no se cargan.
 - El HUD muestra el estado de cada una: turistas requeridos, "lista!" o "construida".
 - El **botón de monumento** de la barra de construcción representa siempre la próxima histórica sin construir: mientras faltan turistas está **deshabilitado** y se llena de dorado según el progreso; al desbloquearse hace un "pop" y su borde pulsa dorado hasta construirla.
 
@@ -71,7 +71,7 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/dirt_manager.gd` | Máscara de basura: ventanas 3x3 con ≥N casas menos áreas de limpieza (Image → ImageTexture → shader) |
 | `shaders/grid.gdshader` | Grilla y basura (`dirt_mask`) en la cara superior de las tiles; costados color tierra |
 | `scripts/terrain_tiles.gd` | Terreno por tiles (MultiMesh): esconde las celdas bloqueadas y anima la emergida al desbloquear |
-| `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, estatua FBX, HUD |
+| `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, modelos FBX, HUD |
 | `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta). El 60% de las casas la usa; el resto sale como prop FBX (15% puesto, 10% columna, 7.5% banco T1, 7.5% banco T2) con la misma mecánica |
 | `scripts/main_menu.gd` | Menú inicial: "Madrid" arranca la partida (tiles emergen animadas + aparece la UI); "Buenos Aires" coming soon |
 | `scripts/loading_screen.gd` | Pantalla de carga: tapa todo mientras los FBX cargan en hilos de fondo y se desvanece hacia el menú |
