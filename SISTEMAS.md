@@ -73,8 +73,7 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/terrain_tiles.gd` | Terreno por tiles (MultiMesh): esconde las celdas bloqueadas y anima la emergida al desbloquear |
 | `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, modelos FBX, HUD |
 | `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta). El 60% de las casas la usa; el resto sale como prop FBX (15% puesto, 10% columna, 7.5% banco T1, 7.5% banco T2) con la misma mecánica |
-| `scripts/main_menu.gd` | Menú inicial en 3 pantallas: portada (fondo + logo + "Jugar") → ciudades con fondo blureado (Madrid / Buenos Aires bloqueada) → mapas de Madrid ("Retiro" arranca la partida; 2 mapas bloqueados) |
-| `shaders/menu_blur.gdshader` | Blur gaussiano del fondo del menú (se anima al pasar a la selección de ciudad) |
+| `scripts/main_menu.gd` | Menú inicial: "Madrid" arranca la partida (tiles emergen animadas + aparece la UI); "Buenos Aires" coming soon |
 | `scripts/loading_screen.gd` | Pantalla de carga: tapa todo mientras los FBX cargan en hilos de fondo y se desvanece hacia el menú |
 | `scripts/tourist_manager.gd` | Spawn por casa (1/s), gates de suciedad/naturaleza, "+1" flotante, `total_spawned` |
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
