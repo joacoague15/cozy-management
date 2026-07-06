@@ -1,8 +1,9 @@
 extends Node
 ## Autoload "Sfx": efectos de sonido cozy sintetizados en runtime (sin
 ## assets): pops suaves de seleccion, un "plop" grave al construir, un pop
-## descendente al borrar y una campanita doble cuando un monumento queda
-## listo. Todos son senos calidos con ataque suave y caida exponencial, a
+## descendente al borrar, una campanita doble cuando un monumento queda
+## listo y un barrido con brillo cuando un limpiador purifica tiles.
+## Todos son senos calidos con ataque suave y caida exponencial, a
 ## volumen bajo. Cada play() crea un AudioStreamPlayer descartable, asi los
 ## sonidos se superponen sin cortarse.
 
@@ -22,6 +23,7 @@ func _ready() -> void:
 		build = _thump(),
 		delete = _blip(300.0, 140.0, 0.16, 0.3),
 		ready = _chime(),
+		clean = _sweep(),
 	}
 	_start_music()
 
@@ -125,6 +127,32 @@ func _chime() -> AudioStreamWAV:
 			phase += TAU * freq / MIX_RATE
 			var env := minf(t * 200.0, 1.0) * exp(-7.0 * t)
 			samples[i] += (sin(phase) + 0.25 * sin(phase * 3.0)) / 1.25 * env * 0.22
+	return _make_stream(samples)
+
+## Barrido de limpieza: un "shhh" de ruido filtrado que sube y baja (como un
+## cepillo pasando) y, cuando el barrido termina, un brillo ascendente cortito
+## que resuelve: "quedo limpio".
+func _sweep() -> AudioStreamWAV:
+	var duration := 0.55
+	var count := int(duration * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var filtered := 0.0
+	for i in count:
+		var t := float(i) / MIX_RATE
+		# Ruido pasado por un one-pole: soplido suave, sin aspereza.
+		filtered = lerpf(filtered, randf_range(-1.0, 1.0), 0.12)
+		var swoosh := sin(PI * clampf(t / 0.34, 0.0, 1.0))
+		samples[i] = filtered * swoosh * swoosh * 0.5
+	# Brillo resolutivo: seno ascendente con armonico, entra al morir el ruido.
+	var start := int(0.26 * MIX_RATE)
+	var phase := 0.0
+	for i in range(start, count):
+		var t := float(i - start) / MIX_RATE
+		var freq := lerpf(740.0, 1180.0, minf(t / 0.2, 1.0))
+		phase += TAU * freq / MIX_RATE
+		var env := minf(t * 150.0, 1.0) * exp(-9.0 * t)
+		samples[i] += (sin(phase) + 0.3 * sin(phase * 2.0)) / 1.3 * env * 0.26
 	return _make_stream(samples)
 
 func _make_stream(samples: PackedFloat32Array) -> AudioStreamWAV:

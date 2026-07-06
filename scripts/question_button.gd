@@ -33,7 +33,7 @@ func _ready() -> void:
 	_panel.visible = false
 	_label = Label.new()
 	_label.text = HINT_TEXT
-	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(_label)
 	add_child(_panel)

@@ -7,6 +7,7 @@ Documentación de los sistemas de juego que complementan a las casas y turistas 
 - El mapa arranca limpio. Cada **ventana de 3x3 que contenga al menos `dirt_house_threshold` casas distintas** (por defecto **4**) ensucia **sus 9 tiles completas** (dibujada en el shader `shaders/grid.gdshader` con una textura-máscara de 1 pixel por tile). La zona sucia no es un cuadrado plano: lleva **manchas orgánicas de ruido, un vaho que deriva lento y una mancha por tile que palpita**, para que se lea claramente como mugre. Solo se evalúan ventanas **completamente adentro de la zona desbloqueada**: la basura nunca aparece fuera de ella.
 - El **tile de limpieza** (tecla **4**, 1x1, celeste) purifica un área de `clean_size` x `clean_size` tiles **centrada en él** (por defecto **5x5**, configurable en el menú F1). Al seleccionarlo, un quad celeste translúcido con pulso suave previsualiza las tiles que va a purificar (la naturaleza tiene el mismo feedback en verde con las tiles que va a cubrir). Cuando hay suciedad, el botón de limpieza de la barra **titila cada tanto** (doble pulso de escala con destello) para invitar a clickearlo.
 - La máscara se **recalcula desde cero** (ventanas sucias menos áreas de limpiadores) cada vez que cambian los edificios o cambian `dirt_house_threshold` / `clean_size` en vivo: borrar un limpiador hace volver la basura.
+- La máscara **transiciona en vez de cambiar de golpe**: la suciedad aparece rápido y se retira despacio (~1.2 seg), con la mancha encogiéndose por su borde ondulado. Al colocar un limpiador que purifica tiles hay además un **efecto resolutivo**: un destello celeste plano sobre las tiles limpiadas, chispas que suben flotando y un sonido de barrido con un brillo final. El estado lógico (casas que vuelven a generar) cambia al instante; la transición es solo visual.
 - **Una casa con alguna tile sucia deja de generar turistas** hasta que un limpiador purifique la zona. Las casas desactivadas (por suciedad o déficit de naturaleza) se ven **grises/apagadas** (película translúcida animada) y recuperan su color al reactivarse.
 
 ## Naturaleza
@@ -68,7 +69,7 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | Archivo | Rol |
 |---|---|
 | `scripts/game_config.gd` | Autoload `GameConfig` con todos los parámetros |
-| `scripts/dirt_manager.gd` | Máscara de basura: ventanas 3x3 con ≥N casas menos áreas de limpieza (Image → ImageTexture → shader) |
+| `scripts/dirt_manager.gd` | Máscara de basura: ventanas 3x3 con ≥N casas menos áreas de limpieza (Image → ImageTexture → shader), transición animada de la máscara y efecto resolutivo (destello + chispas + sonido) al limpiar |
 | `shaders/grid.gdshader` | Grilla y basura (`dirt_mask`) en la cara superior de las tiles; costados color tierra |
 | `scripts/terrain_tiles.gd` | Terreno por tiles (MultiMesh): esconde las celdas bloqueadas y anima la emergida al desbloquear |
 | `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, modelos FBX, HUD |
@@ -77,6 +78,6 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/tourist_manager.gd` | Spawn por casa (1/s), gates de suciedad/naturaleza, "+1" flotante, `total_spawned` |
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
 | `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza, botón de monumento con progreso y titileo tutorial (casa hasta la primera colocada; limpieza/naturaleza cuando hacen falta) |
-| `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo) y música de fondo en loop |
+| `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo, barrido de limpieza) y música de fondo en loop |
 | `scripts/question_button.gd` | Ayuda de controles abajo a la derecha: el "?" aparece al arrancar la partida y se transforma en "Click izquierdo para construir / Click derecho para eliminar" |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |
