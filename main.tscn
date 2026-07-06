@@ -106,8 +106,9 @@ script = ExtResource("10_toolbar")
 build_manager = NodePath("../BuildManager")
 tourist_manager = NodePath("../TouristManager")
 
-[node name="QuestionButton" type="CanvasLayer" parent="."]
+[node name="QuestionButton" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager")]
 script = ExtResource("12_question")
+build_manager = NodePath("../BuildManager")
 
 [node name="LoadingScreen" type="CanvasLayer" parent="." node_paths=PackedStringArray("build_manager", "question_button")]
 script = ExtResource("14_loading")

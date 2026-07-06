@@ -79,5 +79,5 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
 | `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza, botón de monumento con progreso y titileo tutorial (casa hasta la primera colocada; limpieza/naturaleza cuando hacen falta) |
 | `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo, barrido de limpieza) y música de fondo en loop |
-| `scripts/question_button.gd` | Ayuda de controles abajo a la derecha: el "?" aparece al arrancar la partida y se transforma en "Click izquierdo para construir / Click derecho para eliminar" |
+| `scripts/question_button.gd` | Ayuda de controles abajo a la derecha: el "?" aparece al arrancar la partida y se transforma en "Click izquierdo para construir / Click derecho para eliminar"; al juntar los turistas del primer monumento aparece suave un tercer mensaje dorado "Pon el primer monumento" (se va al construirlo) |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |
