@@ -39,9 +39,6 @@ func _start_music() -> void:
 	if ResourceLoader.exists(MUSIC_PATH):
 		stream = load(MUSIC_PATH)
 	if stream == null:
-		# El asset todavia no fue importado por el editor: parsear el WAV crudo.
-		stream = AudioStreamWAV.load_from_file(MUSIC_PATH)
-	if stream == null:
 		push_warning("No se pudo cargar %s: sin musica de fondo." % MUSIC_PATH)
 		return
 	if stream is AudioStreamWAV and stream.format != AudioStreamWAV.FORMAT_IMA_ADPCM:

@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_back;
+render_mode cull_back, ambient_light_disabled;
 
 // Terreno por tiles (cajas via MultiMesh): la cara superior lleva la grilla
 // cada 1 unidad de mundo y la basura; los costados van de un color tierra.
@@ -16,6 +16,8 @@ uniform vec3 dirt_color: source_color = vec3(0.23, 0.2, 0.16);
 uniform vec3 dirt_stain_color: source_color = vec3(0.15, 0.13, 0.09);
 uniform float dirt_strength: hint_range(0.0, 1.0) = 0.7;
 uniform float grid_extent = 20.0;
+// 1.0 = bandas duras puras; 0.0 = luz suave clasica (ver toon.gdshader).
+uniform float band_mix: hint_range(0.0, 1.0) = 1.0;
 
 varying vec3 world_pos;
 varying vec3 world_normal;
@@ -95,4 +97,19 @@ void fragment() {
 		ALBEDO = col;
 	}
 	ROUGHNESS = 1.0;
+}
+
+void light() {
+	// Cel shading: tres bandas duras, a juego con el toon de los modelos
+	// (shaders/toon.gdshader). ATTENUATION mete la sombra proyectada en el
+	// bandeo, asi las sombras sobre el pasto cortan a filo. La banda base es
+	// alta para que el pasto en sombra siga leyendose verde.
+	// Sombras sobre el pasto bien oscuras y neutras (hacia negro), a juego
+	// con la banda de sombra de los modelos.
+	float d = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
+	float banded = 0.3
+		+ 0.45 * smoothstep(0.24, 0.27, d)
+		+ 0.35 * smoothstep(0.58, 0.61, d);
+	float lit = mix(0.3 + 0.8 * d, banded, band_mix);
+	DIFFUSE_LIGHT += lit * LIGHT_COLOR / PI;
 }
