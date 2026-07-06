@@ -36,6 +36,12 @@ const WARNING_FILL_COLOR := Color(0.95, 0.35, 0.28, 0.55)
 const READY_GLOW_COLOR := Color(1.0, 0.85, 0.4)
 ## Velocidad del suavizado exponencial de los rellenos (mayor = mas rapido).
 const FILL_SMOOTH_SPEED := 5.0
+## Titileo tutorial: el boton que conviene clickear (casa al arrancar,
+## limpieza con basura, naturaleza con deficit) pulsa cada tanto.
+const ATTENTION_FIRST_DELAY := 0.8
+const ATTENTION_INTERVAL := 2.4
+const ATTENTION_SCALE := 1.14
+const ATTENTION_FLASH_COLOR := Color(1.35, 1.3, 1.1)
 
 @export var build_manager: Node3D
 @export var tourist_manager: Node3D
@@ -53,6 +59,8 @@ var _monument_fill: Dictionary
 var _monument_normal_style: StyleBoxFlat
 var _monument_variant := 1
 var _monument_was_ready := false
+## Cuenta regresiva del titileo tutorial de cada boton (Button -> segundos).
+var _attention_timers: Dictionary = {}
 
 func _ready() -> void:
 	_vbox = VBoxContainer.new()
@@ -100,6 +108,12 @@ func _process(delta: float) -> void:
 	_update_fill(_clean_fill, clean, delta, pulse, clean < 1.0)
 	_update_fill(_nature_fill, nature, delta, pulse, nature < 1.0)
 	_update_monument_state(delta, pulse)
+
+	# Titileo tutorial: la casa insiste hasta la primera colocada; limpieza y
+	# naturaleza insisten mientras hagan falta y no esten ya seleccionadas.
+	_update_attention(_house_button, build_manager.house_count() == 0, delta)
+	_update_attention(_cleaner_button, clean < 1.0, delta)
+	_update_attention(_nature_button, nature < 1.0, delta)
 
 func _on_button_toggled(pressed: bool, type: String, variant: int) -> void:
 	if pressed:
@@ -155,6 +169,34 @@ func _update_monument_state(delta: float, pulse: float) -> void:
 
 	if _monument_button.tooltip_text != tooltip:
 		_monument_button.tooltip_text = tooltip
+
+## Titileo tutorial de un boton: mientras `active`, cada ATTENTION_INTERVAL
+## segundos hace un doble pulso de escala con un destello calido, para que se
+## note que conviene clickearlo. Se apaga solo mientras el boton ya esta
+## presionado (su herramienta seleccionada) o cuando deja de hacer falta.
+func _update_attention(button: Button, active: bool, delta: float) -> void:
+	if not active or button.button_pressed:
+		_attention_timers[button] = ATTENTION_FIRST_DELAY
+		return
+	var timer: float = _attention_timers.get(button, ATTENTION_FIRST_DELAY) - delta
+	if timer <= 0.0:
+		timer = ATTENTION_INTERVAL
+		_pulse_attention(button)
+	_attention_timers[button] = timer
+
+## Doble rebote de escala + destello: el "titileo" de un pulso.
+func _pulse_attention(button: Button) -> void:
+	button.pivot_offset = button.size / 2.0
+	var tween := button.create_tween()
+	tween.tween_property(button, "scale", Vector2.ONE * ATTENTION_SCALE, 0.13) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(button, "scale", Vector2.ONE, 0.15)
+	tween.tween_property(button, "scale", Vector2.ONE * (1.0 + (ATTENTION_SCALE - 1.0) * 0.5), 0.11) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(button, "scale", Vector2.ONE, 0.14)
+	var flash := button.create_tween()
+	flash.tween_property(button, "self_modulate", ATTENTION_FLASH_COLOR, 0.13)
+	flash.tween_property(button, "self_modulate", Color.WHITE, 0.4)
 
 ## Pop de escala al pasar de bloqueado a listo: "ya lo podes construir".
 func _pop_monument() -> void:

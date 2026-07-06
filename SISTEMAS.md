@@ -5,7 +5,7 @@ Documentación de los sistemas de juego que complementan a las casas y turistas 
 ## Basura
 
 - El mapa arranca limpio. Cada **ventana de 3x3 que contenga al menos `dirt_house_threshold` casas distintas** (por defecto **4**) ensucia **sus 9 tiles completas** (dibujada en el shader `shaders/grid.gdshader` con una textura-máscara de 1 pixel por tile). La zona sucia no es un cuadrado plano: lleva **manchas orgánicas de ruido, un vaho que deriva lento y una mancha por tile que palpita**, para que se lea claramente como mugre. Solo se evalúan ventanas **completamente adentro de la zona desbloqueada**: la basura nunca aparece fuera de ella.
-- El **tile de limpieza** (tecla **4**, 1x1, celeste) purifica un área de `clean_size` x `clean_size` tiles **centrada en él** (por defecto **5x5**, configurable en el menú F1). Al seleccionarlo, un quad translúcido con pulso suave previsualiza el área que va a purificar.
+- El **tile de limpieza** (tecla **4**, 1x1, celeste) purifica un área de `clean_size` x `clean_size` tiles **centrada en él** (por defecto **5x5**, configurable en el menú F1). Al seleccionarlo, un quad celeste translúcido con pulso suave previsualiza las tiles que va a purificar (la naturaleza tiene el mismo feedback en verde con las tiles que va a cubrir). Cuando hay suciedad, el botón de limpieza de la barra **titila cada tanto** (doble pulso de escala con destello) para invitar a clickearlo.
 - La máscara se **recalcula desde cero** (ventanas sucias menos áreas de limpiadores) cada vez que cambian los edificios o cambian `dirt_house_threshold` / `clean_size` en vivo: borrar un limpiador hace volver la basura.
 - **Una casa con alguna tile sucia deja de generar turistas** hasta que un limpiador purifique la zona. Las casas desactivadas (por suciedad o déficit de naturaleza) se ven **grises/apagadas** (película translúcida animada) y recuperan su color al reactivarse.
 
@@ -13,7 +13,7 @@ Documentación de los sistemas de juego que complementan a las casas y turistas 
 
 - Cada **`nature_per_houses` casas colocadas** (por defecto **4**) se exigen **`nature_amount` tiles de naturaleza** (por defecto **2**, tecla **5**).
 - La naturaleza mide `nature_size` x `nature_size` (por defecto **1x1**, configurable) y es un parque plano **sin colisión**: los turistas la atraviesan.
-- Las casas **siempre se pueden colocar**. Si hay déficit (`naturalezas colocadas < floor(casas / nature_per_houses) * nature_amount`), **ninguna casa genera turistas** hasta compensar. El HUD lo avisa con `[SIN TURISTAS NUEVOS: falta naturaleza]` y el **relleno del botón de naturaleza** (barra de construcción) se vacía suavemente y pulsa en rojo; el botón de limpieza hace lo mismo con la suciedad.
+- Las casas **siempre se pueden colocar**. Si hay déficit (`naturalezas colocadas < floor(casas / nature_per_houses) * nature_amount`), **ninguna casa genera turistas** hasta compensar. El HUD lo avisa con `[SIN TURISTAS NUEVOS: falta naturaleza]` y el **relleno del botón de naturaleza** (barra de construcción) se vacía suavemente y pulsa en rojo; el botón de limpieza hace lo mismo con la suciedad. Además, con déficit el botón de naturaleza **titila cada tanto** (igual que el de limpieza con basura), y al seleccionar naturaleza un quad verde translúcido previsualiza las tiles que va a cubrir.
 
 ## Generación de turistas
 
@@ -73,11 +73,10 @@ Los tamaños se leen **en vivo**: cambiar `nature_size` o `historic_size` afecta
 | `scripts/terrain_tiles.gd` | Terreno por tiles (MultiMesh): esconde las celdas bloqueadas y anima la emergida al desbloquear |
 | `scripts/build_manager.gd` | Tipos de edificio (`house`/`cleaner`/`nature`/`historic`), zonas desbloqueables, desbloqueos históricos, modelos FBX, HUD |
 | `scripts/house_generator.gd` | Geometría procedural de las casas (altura, techo, ventanas, puerta). El 60% de las casas la usa; el resto sale como prop FBX (15% puesto, 10% columna, 7.5% banco T1, 7.5% banco T2) con la misma mecánica |
-| `scripts/main_menu.gd` | Menú inicial: "Madrid" arranca la partida (tiles emergen animadas + aparece la UI); "Buenos Aires" coming soon |
-| `scripts/loading_screen.gd` | Pantalla de carga: tapa todo mientras los FBX cargan en hilos de fondo y se desvanece hacia el menú |
+| `scripts/loading_screen.gd` | Pantalla de carga: tapa todo mientras los FBX cargan en hilos de fondo; al terminar arranca la partida directamente (sin menú: las tiles emergen animadas mientras se desvanece) |
 | `scripts/tourist_manager.gd` | Spawn por casa (1/s), gates de suciedad/naturaleza, "+1" flotante, `total_spawned` |
 | `scripts/status_ui.gd` | Cartel de fin de demo al construir el palacio |
-| `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza y botón de monumento con progreso |
+| `scripts/build_toolbar.gd` | Barra de botones: rellenos de limpieza/naturaleza, botón de monumento con progreso y titileo tutorial (casa hasta la primera colocada; limpieza/naturaleza cuando hacen falta) |
 | `scripts/sfx.gd` | Autoload `Sfx`: sonidos sintetizados en runtime (seleccionar, construir, borrar, monumento listo) y música de fondo en loop |
-| `scripts/question_button.gd` | Botón "?" abajo a la derecha: aparece al azar, al presionarlo muestra una curiosidad del Retiro (4 textos sorteados sin repetir) apoyada en el suelo al costado de la zona jugable por 10 seg |
+| `scripts/question_button.gd` | Ayuda de controles abajo a la derecha: el "?" aparece al arrancar la partida y se transforma en "Click izquierdo para construir / Click derecho para eliminar" |
 | `scripts/tourist_menu.gd` | Secciones del panel F1 |

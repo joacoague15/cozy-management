@@ -3,7 +3,8 @@ extends Node3D
 ## Teclas 1/2/3: casas (geometria procedural via HouseGenerator: cada una sale
 ## distinta). 4: tile de limpieza (purifica la suciedad alrededor; al elegirla
 ## se previsualiza el area NxN que va a purificar). 5: naturaleza (se exigen
-## GameConfig.nature_amount por cada nature_per_houses casas). 6/7/8:
+## GameConfig.nature_amount por cada nature_per_houses casas; al elegirla se
+## previsualizan en verde las tiles que va a cubrir). 6/7/8:
 ## construcciones historicas (se desbloquean con turistas totales, una de cada
 ## una; la 6 es el cartel del Retiro, ocupa 1x1 y construirlo amplia la
 ## zona construible). Click izquierdo coloca, click derecho cancela o borra.
@@ -61,6 +62,7 @@ const TRASH_RING_COLOR := Color(0.75, 0.78, 0.72)
 const GHOST_VALID_COLOR := Color(0.3, 0.9, 0.3, 0.45)
 const GHOST_INVALID_COLOR := Color(0.9, 0.25, 0.25, 0.45)
 const CLEAN_PREVIEW_COLOR := Color(0.55, 0.83, 0.93)
+const NATURE_PREVIEW_COLOR := Color(0.5, 0.85, 0.42)
 const HOVER_COLOR := Color(1.0, 0.95, 0.8)
 
 ## Lados de las zonas construibles (centradas en la grilla). Se arranca en la
@@ -280,20 +282,33 @@ func _update_ghost() -> void:
 	)
 	_ghost_material.albedo_color = GHOST_VALID_COLOR if _hover_valid else GHOST_INVALID_COLOR
 	_ghost.visible = true
-	_update_clean_preview()
+	_update_area_preview()
 
-## Feedback del area NxN que va a purificar el tile de limpieza antes de
-## colocarlo: un quad apenas visible con un pulso suave de opacidad.
-func _update_clean_preview() -> void:
-	if _selected_type != TYPE_CLEANER:
-		_area_ghost.visible = false
-		return
-	var clean := maxi(GameConfig.clean_size, 1)
-	var plane: PlaneMesh = _area_ghost.mesh
-	plane.size = Vector2(clean, clean)
-	_area_ghost.position = Vector3(_hover_cell.x + 0.5, 0.03, _hover_cell.y + 0.5)
+## Feedback tutorial de las tiles afectadas antes de colocar: con limpieza
+## seleccionada, un quad celeste marca el area NxN que va a purificar; con
+## naturaleza, un quad verde marca las tiles que va a cubrir el parque.
+## Ambos pulsan suave para leerse como preview y no como algo ya construido.
+func _update_area_preview() -> void:
+	var area := 0
 	var color := CLEAN_PREVIEW_COLOR
-	color.a = 0.16 + 0.07 * sin(Time.get_ticks_msec() / 350.0)
+	match _selected_type:
+		TYPE_CLEANER:
+			area = maxi(GameConfig.clean_size, 1)
+		TYPE_NATURE:
+			area = _selection_size()
+			color = NATURE_PREVIEW_COLOR
+		_:
+			_area_ghost.visible = false
+			return
+	var plane: PlaneMesh = _area_ghost.mesh
+	plane.size = Vector2(area, area)
+	# El area queda centrada en el footprint de la seleccion (la limpieza es
+	# 1x1: su area NxN se centra en esa tile).
+	var footprint := _selection_size()
+	_area_ghost.position = Vector3(
+		_hover_cell.x + footprint * 0.5, 0.03, _hover_cell.y + footprint * 0.5
+	)
+	color.a = 0.24 + 0.09 * sin(Time.get_ticks_msec() / 350.0)
 	_area_ghost_material.albedo_color = color
 	_area_ghost.visible = true
 

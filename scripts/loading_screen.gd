@@ -2,14 +2,16 @@ extends CanvasLayer
 ## Pantalla de carga: fondo calido que tapa todo desde el primer frame
 ## mientras build_manager carga los modelos FBX en hilos de fondo. Muestra
 ## "Cargando" con puntos animados y un pulso suave. Dura siempre al menos
-## MIN_SECONDS aunque la carga haya terminado antes, y recien despues se
-## desvanece hacia el menu.
+## MIN_SECONDS aunque la carga haya terminado antes, y recien despues arranca
+## la partida (las tiles emergen animadas debajo mientras se desvanece) y
+## activa la ayuda de controles.
 
 const MIN_SECONDS := 3.0
 const FADE_SECONDS := 0.7
 const BACKGROUND_COLOR := Color(0.11, 0.1, 0.085)
 
 @export var build_manager: Node3D
+@export var question_button: CanvasLayer
 
 var _root: Control
 var _loading_label: Label
@@ -52,6 +54,10 @@ func _process(delta: float) -> void:
 
 	if _models_done and _elapsed >= MIN_SECONDS and not _fading:
 		_fading = true
+		# La partida arranca debajo de la pantalla: las tiles emergen mientras
+		# el fondo se desvanece, sin menu intermedio.
+		build_manager.start_game()
+		question_button.begin()
 		var tween := _root.create_tween()
 		tween.tween_property(_root, "modulate:a", 0.0, FADE_SECONDS) \
 				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)

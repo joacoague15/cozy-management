@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="b0e98fb8-aa9c-43e1-90d9-16ddc71df38a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/SISTEMAS.md" beforeDir="false" afterPath="$PROJECT_DIR$/SISTEMAS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.tscn" beforeDir="false" afterPath="$PROJECT_DIR$/main.tscn" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/build_manager.gd" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/build_manager.gd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/build_toolbar.gd" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/build_toolbar.gd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/loading_screen.gd" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/loading_screen.gd" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/main_menu.gd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/main_menu.gd.uid" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/question_button.gd" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/question_button.gd" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="b500fe5888e90076113223b3900cdbf1ba35ac5f" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
+  <component name="ProjectId" id="3G706Xmi3ZFNQXKlsYa0GpqBoYH" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/joaco/OneDrive/Documents/cozy-management",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-WS-253.30387.83" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="b0e98fb8-aa9c-43e1-90d9-16ddc71df38a" name="Changes" comment="" />
+      <created>1783307125242</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1783307125242</updated>
+      <workItem from="1783307126232" duration="87000" />
+      <workItem from="1783307491487" duration="714000" />
+      <workItem from="1783346054307" duration="266000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

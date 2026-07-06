@@ -1,110 +1,84 @@
 extends CanvasLayer
-## Boton de pregunta abajo a la derecha: aparece en momentos aleatorios de
-## la partida (con un pop de escala). Al presionarlo desaparece (mas tarde
-## puede volver a aparecer) y muestra un texto apoyado en el piso al costado
-## de la zona jugable — nunca encima de ella — que se desvanece a los 10 seg.
+## Ayuda de controles abajo a la derecha: el boton "?" aparece apenas comienza
+## la partida (con un pop de escala) y enseguida se transforma en el
+## recordatorio de controles, "Click izquierdo para construir" y debajo
+## "Click derecho para eliminar". Clickearlo lo transforma al instante.
 
-## Intervalos de aparicion (los originales 15-45 reducidos un 30%).
-const APPEAR_MIN := 11.5
-const APPEAR_MAX := 34.5
-const MESSAGE_SECONDS := 10.0
-
-## Curiosidades del Retiro: se sortean sin repetir hasta agotar la lista
-## (recien ahi se vuelve a barajar).
-const MESSAGES: Array[String] = [
-	"El Palacio de Cristal fue construida en el siglo XIX. Hoy alberga exposiciones de arte junto a un hermoso estanque.",
-	"El Palacio de Velázquez fue diseñado por Ricardo Velázquez Bosco. Actualmente funciona como sala de exposiciones.",
-	"La estatua del Ángel Caído es una de las pocas esculturas dedicadas a Lucifer y se encuentra a 666 metros sobre el nivel del mar.",
-	"La Fuente de los Galápagos fue creada para celebrar el primer año de vida de la reina Isabel II. Está decorada con tortugas y delfines.",
-]
-
-@export var build_manager: Node3D
+## Cuanto queda el "?" en pantalla antes de transformarse solo.
+const TRANSFORM_DELAY := 1.2
+const HINT_TEXT := "Click izquierdo para construir\nClick derecho para eliminar"
 
 var _button: Button
-var _appear_timer := 0.0
-var _active := false
-var _pending_messages: Array[String] = []
+var _panel: PanelContainer
+var _label: Label
+var _transformed := false
 
 func _ready() -> void:
-	# Arranca oculto e inactivo: el menu inicial lo activa con begin().
+	# Arranca oculto: la pantalla de carga lo activa con begin() al empezar.
 	visible = false
-	_appear_timer = randf_range(APPEAR_MIN, APPEAR_MAX)
+
 	_button = Button.new()
 	_button.focus_mode = Control.FOCUS_NONE
-	_button.visible = false
 	if ResourceLoader.exists("res://icons/question.svg"):
 		_button.icon = load("res://icons/question.svg")
 		_button.expand_icon = true
 		_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	else:
 		_button.text = "?"
-	_button.pressed.connect(_on_pressed)
+	_button.pressed.connect(_transform_to_hints)
 	add_child(_button)
+
+	_panel = PanelContainer.new()
+	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.visible = false
+	_label = Label.new()
+	_label.text = HINT_TEXT
+	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.add_child(_label)
+	add_child(_panel)
+
 	get_viewport().size_changed.connect(_update_layout)
 	_update_layout()
 
-## Lo llama el menu inicial al empezar la partida: recien ahi corre el
-## sorteo de aparicion.
+## Lo llama la pantalla de carga al arrancar la partida: el "?" hace su pop
+## y poco despues se transforma en el recordatorio de controles.
 func begin() -> void:
 	visible = true
-	_active = true
-	_appear_timer = randf_range(APPEAR_MIN, APPEAR_MAX)
-
-func _process(delta: float) -> void:
-	if not _active or _button.visible:
-		return
-	_appear_timer -= delta
-	if _appear_timer <= 0.0:
-		_show_button()
-
-## Aparece con un pop suave para que se note sin ser invasivo.
-func _show_button() -> void:
-	_button.visible = true
 	_button.pivot_offset = _button.size / 2.0
 	_button.scale = Vector2.ONE * 0.2
 	var tween := _button.create_tween()
 	tween.tween_property(_button, "scale", Vector2.ONE, 0.45) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	get_tree().create_timer(TRANSFORM_DELAY).timeout.connect(_transform_to_hints)
 
-func _on_pressed() -> void:
-	Sfx.play("select", 0.04)
-	_button.visible = false
-	_appear_timer = randf_range(APPEAR_MIN, APPEAR_MAX)
-	_show_message()
+## El "?" se encoge y en su lugar crece el cartel con los controles, ambos
+## desde la misma esquina para que se lea como una transformacion.
+func _transform_to_hints() -> void:
+	if _transformed:
+		return
+	_transformed = true
+	_button.pivot_offset = _button.size / 2.0
+	var shrink := _button.create_tween()
+	shrink.tween_property(_button, "scale", Vector2.ONE * 0.2, 0.25) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	shrink.parallel().tween_property(_button, "modulate:a", 0.0, 0.25)
+	shrink.tween_callback(func() -> void: _button.visible = false)
 
-## Texto 3D al costado de la zona desbloqueada, del lado de la camara (+Z):
-## siempre queda pegado al borde pero fuera de las tiles jugables. Va acostado
-## en paralelo al terreno, como si estuviera pintado en el suelo, con el tope
-## del texto hacia el mapa para leerse derecho desde la camara.
-func _show_message() -> void:
-	if _pending_messages.is_empty():
-		_pending_messages = MESSAGES.duplicate()
-		_pending_messages.shuffle()
-	var rect: Rect2i = build_manager.unlocked_rect()
-	var label := Label3D.new()
-	label.text = _pending_messages.pop_back()
-	label.font = preload("res://fonts/cozy_font.tres")
-	label.font_size = 48
-	label.pixel_size = 0.005
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.width = 800
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.modulate = Color(1.0, 0.97, 0.88)
-	label.outline_modulate = Color(0.25, 0.17, 0.1)
-	label.outline_size = 10
-	label.rotation_degrees.x = -90.0
-	label.position = Vector3(rect.position.x + rect.size.x * 0.5, 0.05, rect.end.y + 1.6)
-	get_tree().current_scene.add_child(label)
-
-	label.modulate.a = 0.0
-	var tween := label.create_tween()
-	tween.tween_property(label, "modulate:a", 1.0, 0.5).set_ease(Tween.EASE_OUT)
-	tween.tween_interval(MESSAGE_SECONDS - 1.5)
-	tween.tween_property(label, "modulate:a", 0.0, 1.0).set_ease(Tween.EASE_IN)
-	tween.tween_callback(label.queue_free)
+	_panel.visible = true
+	_panel.reset_size()
+	_update_layout()
+	_panel.pivot_offset = _panel.size  # Crece desde la esquina inferior derecha.
+	_panel.scale = Vector2.ONE * 0.2
+	_panel.modulate.a = 0.0
+	var grow := _panel.create_tween()
+	grow.tween_interval(0.18)
+	grow.tween_property(_panel, "scale", Vector2.ONE, 0.4) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	grow.parallel().tween_property(_panel, "modulate:a", 1.0, 0.3)
 
 ## Mismo criterio de tamano que la barra de construccion: fraccion del alto
-## del viewport, anclado abajo a la izquierda.
+## del viewport, anclado abajo a la derecha.
 func _update_layout() -> void:
 	var vh := get_viewport().get_visible_rect().size.y
 	var vw := get_viewport().get_visible_rect().size.x
@@ -112,21 +86,27 @@ func _update_layout() -> void:
 	_button.custom_minimum_size = Vector2(side, side)
 	_button.size = Vector2(side, side)
 	_button.position = Vector2(vw - side * 1.25, vh - side * 1.25)
-
-	var normal := _make_style(side, Color(0, 0, 0, 0.4), Color(1, 1, 1, 0.12))
-	_button.add_theme_stylebox_override("normal", normal)
+	_button.add_theme_stylebox_override("normal", _make_style(side, Color(0, 0, 0, 0.4), Color(1, 1, 1, 0.12), 0.5))
 	_button.add_theme_stylebox_override(
-		"hover", _make_style(side, Color(0.16, 0.16, 0.16, 0.55), Color(1, 1, 1, 0.25))
+		"hover", _make_style(side, Color(0.16, 0.16, 0.16, 0.55), Color(1, 1, 1, 0.25), 0.5)
 	)
 	_button.add_theme_stylebox_override(
-		"pressed", _make_style(side, Color(0.12, 0.25, 0.12, 0.75), Color(0.65, 0.9, 0.6))
+		"pressed", _make_style(side, Color(0.12, 0.25, 0.12, 0.75), Color(0.65, 0.9, 0.6), 0.5)
 	)
 
-func _make_style(side: float, bg: Color, border: Color) -> StyleBoxFlat:
+	_label.add_theme_font_size_override("font_size", roundi(vh * 0.024))
+	_label.add_theme_color_override("font_color", Color(1.0, 0.97, 0.88))
+	_panel.add_theme_stylebox_override(
+		"panel", _make_style(side, Color(0, 0, 0, 0.4), Color(1, 1, 1, 0.12), 0.18)
+	)
+	_panel.reset_size()
+	_panel.position = Vector2(vw - _panel.size.x - side * 0.25, vh - _panel.size.y - side * 0.25)
+
+func _make_style(side: float, bg: Color, border: Color, corner: float) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = bg
 	style.border_color = border
 	style.set_border_width_all(maxi(roundi(side * 0.035), 2))
-	style.set_corner_radius_all(roundi(side * 0.5))
+	style.set_corner_radius_all(roundi(side * corner))
 	style.set_content_margin_all(side * 0.2)
 	return style
